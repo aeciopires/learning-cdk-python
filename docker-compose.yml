@@ -1,0 +1,122 @@
+# Local AWS emulator for this learning path - every module in modules/ is
+# meant to be deployed here first, for free, before (optionally) deploying
+# to a real AWS account. See REQUIREMENTS.md for floci-cli as an alternative
+# way to run the same emulator, and for how the browser UI is reached.
+#
+# References:
+# - https://floci.io/aws/
+# - https://github.com/floci-io/floci
+# - https://github.com/floci-io/floci-ui (the optional "floci-ui" profile below)
+# - https://github.com/ofsazib/floci-dash (the optional "floci-dash" profile below)
+name: learning-cdk-python
+
+services:
+  # Default, zero-extra-setup path: the emulator plus its own built-in
+  # browser console at http://localhost:4566/_floci/ui - see REQUIREMENTS.md
+  # section 5.3. This is enough for every module in this learning path.
+  floci:
+    image: floci/floci:latest
+    container_name: learning-cdk-python-floci
+    ports:
+      - "4566:4566" # AWS-compatible API endpoint used by the AWS CLI/SDK and the CDK CLI
+    environment:
+      FLOCI_DEFAULT_REGION: us-east-1
+      # memory | persistent | hybrid | wal - "persistent" survives `docker compose down`
+      # via the ./.floci/data volume below.
+      FLOCI_STORAGE_MODE: persistent
+      # The floci-ui web console, served at http://localhost:4566/_floci/ui
+      FLOCI_SERVICES_UI_ENABLED: "true"
+    volumes:
+      # Required so floci can run "real Docker" backends for services such as
+      # ECS, EKS, RDS, and ElastiCache instead of shallow mocks.
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./.floci/data:/app/data
+    networks:
+      - floci-net
+    # Lets the optional floci-ui/floci-dash profiles below wait for floci to
+    # actually be ready (depends_on: condition: service_healthy) instead of
+    # just "started" - see floci-dash's own docker-compose.yml (top-of-file
+    # reference), which uses the same endpoint.
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:4566/_floci/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+
+  # Optional, richer standalone console + API from the floci-ui project
+  # itself (a separate frontend + backend, distinct from the built-in
+  # console above) - see REQUIREMENTS.md section 5.4 for the one-time clone
+  # step this needs. Not required for this learning path; enable with:
+  #   docker compose --profile floci-ui up -d
+  floci-ui:
+    profiles: ["floci-ui"]
+    build:
+      context: ${FLOCI_UI_REPO_PATH:-../floci-ui}/packages/frontend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "4500:4500"
+    environment:
+      API_TARGET: http://floci-api:4501
+      VITE_USE_POLLING: "true"
+    depends_on:
+      - floci-api
+    networks:
+      - floci-net
+
+  floci-api:
+    profiles: ["floci-ui"]
+    build:
+      context: ${FLOCI_UI_REPO_PATH:-../floci-ui}/packages/api
+      dockerfile: Dockerfile.dev
+    ports:
+      - "4501:4501"
+    environment:
+      # Points floci-api at this file's own `floci` service, by its Compose
+      # service name - not at a second emulator container. floci-ui's own
+      # docker-compose.yml (see the top-of-file reference) also configures
+      # FLOCI_AZURE_ENDPOINT/FLOCI_GCP_ENDPOINT for its optional multi-cloud
+      # panels; this learning path is AWS-only, so those are left unset on
+      # purpose (see REQUIREMENTS.md section 5.4) rather than pointed at
+      # emulator containers this file doesn't run.
+      FLOCI_ENDPOINT: http://floci:4566
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      PORT: "4501"
+    depends_on:
+      - floci
+    networks:
+      - floci-net
+
+  # A second, independent optional console: floci-dash
+  # (https://github.com/ofsazib/floci-dash), an unrelated open-source
+  # project from a different author than floci-ui above. Unlike floci-ui,
+  # it ships a ready-made "dashboard-only" image (no source clone needed)
+  # that points at an existing floci instance - see REQUIREMENTS.md section
+  # 5.5. Runs on its own port (9877) so it can be enabled at the same time
+  # as floci-ui (4500/4501) and/or the built-in console (part of `floci`,
+  # section 5.3) without any conflict - all three, if enabled together,
+  # talk to this same `floci` service. Enable with:
+  #   docker compose --profile floci-dash up -d
+  floci-dash:
+    profiles: ["floci-dash"]
+    image: ghcr.io/ofsazib/floci-dash:latest
+    container_name: learning-cdk-python-floci-dash
+    ports:
+      - "9877:3000"
+    environment:
+      FLOCI_URL: http://floci:4566
+      AWS_REGION: us-east-1
+      NODE_ENV: production
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      floci:
+        condition: service_healthy
+    networks:
+      - floci-net
+
+networks:
+  floci-net:
+    name: learning-cdk-python-floci-net

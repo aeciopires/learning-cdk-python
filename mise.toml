@@ -1,0 +1,7 @@
+# Pins the exact Python version this repository is tested with, so `mise
+# install` (optional but recommended - see REQUIREMENTS.md section 3.3)
+# installs it the same way on every machine. Kept in sync with
+# .python-version, which `uv` reads for the same purpose - see
+# REQUIREMENTS.md section 4.
+[tools]
+python = "3.12"
