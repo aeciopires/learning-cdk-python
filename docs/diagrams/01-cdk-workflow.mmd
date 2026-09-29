@@ -1,0 +1,15 @@
+%%{init: {"flowchart": {"htmlLabels": true}} }%%
+flowchart TD
+    Dev["Developer edits\nmodules/NN_service/stack.py"] --> Shared["shared/config.py, shared/tagging.py,\nshared/naming.py"]
+    Shared --> AppPy["app.py\n(pkgutil discovers every modules/*/stack.py,\nbuilds AppConfig + cdk.Environment)"]
+    AppPy --> Synth["uv run cdk synth &lt;StackId&gt;\n(safe, free, no credentials needed)"]
+    Synth --> Template["CloudFormation template\n(cdk.out/&lt;StackId&gt;.template.json)"]
+    Template --> Deploy["uv run cdk deploy &lt;StackId&gt;"]
+    Deploy --> Target{"Which endpoint is\nthe terminal pointed at?"}
+    Target -->|"AWS_ENDPOINT_URL=http://localhost:4566\n(.env / floci)"| Floci["floci\n(local AWS emulator)"]
+    Target -->|"real AWS credentials/profile"| AWS["Real AWS account\n(CloudFormation)"]
+    Floci --> Resources["AWS resources created/updated\n(VPC, S3, SQS, ...)"]
+    AWS --> Resources
+    Resources --> Verify["Verify: AWS CLI / boto3 / floci UI\n(http://localhost:4566/_floci/ui)"]
+    Verify --> Destroy["uv run cdk destroy &lt;StackId&gt;"]
+    Destroy --> Resources

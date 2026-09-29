@@ -1,0 +1,24 @@
+flowchart TB
+    VPC["Amazon VPC\nlearning-cdk-python-dev-vpc-main\nCIDR 10.0.0.0/16"]
+    IGW["Internet Gateway\n(created and attached automatically\nby aws_ec2.Vpc)"]
+    SG["Security Group: AppSecurityGroup\nlearning-cdk-python-dev-sg-app\ningress: TCP 443 from 10.0.0.0/16\noutbound: all allowed"]
+
+    VPC --> IGW
+
+    subgraph AZ1["Availability Zone 1"]
+        Pub1["Public subnet 1\n(route table -> 0.0.0.0/0 via IGW)"]
+        Priv1["Private-isolated subnet 1\n(route table, no internet route)"]
+    end
+
+    subgraph AZ2["Availability Zone 2"]
+        Pub2["Public subnet 2\n(route table -> 0.0.0.0/0 via IGW)"]
+        Priv2["Private-isolated subnet 2\n(route table, no internet route)"]
+    end
+
+    VPC --> Pub1
+    VPC --> Priv1
+    VPC --> Pub2
+    VPC --> Priv2
+    IGW -.->|"routed from"| Pub1
+    IGW -.->|"routed from"| Pub2
+    VPC --> SG

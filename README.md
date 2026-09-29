@@ -67,6 +67,7 @@ uv run cdk destroy IamStack           # and clean it up when you're done
 |---|---|
 | Prerequisites, floci/uv setup, tagging and naming policy | [`REQUIREMENTS.md`](REQUIREMENTS.md) |
 | The full 44-module path, grouped into 11 phases | [`docs/LEARNING-PATH.md`](docs/LEARNING-PATH.md) |
+| Diagrams: the CDK workflow, the floci local environment, and how AWS resources relate to each other | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) |
 | Conventions for anyone (human or AI assistant) extending this repository | [`CLAUDE.md`](CLAUDE.md) |
 | Changelog | [`CHANGELOG.md`](CHANGELOG.md) |
 

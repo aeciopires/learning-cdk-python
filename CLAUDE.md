@@ -66,7 +66,10 @@ translate here.
 ├── shared/                  # tagging.py, naming.py, config.py - see section 5 and 6
 ├── docs/
 │   ├── LEARNING-PATH.md    # the full 44-module table, grouped into 11 phases
-│   └── TESTING.md           # how CDK unit tests work here, and how to write one - see section 3, point 7
+│   ├── TESTING.md           # how CDK unit tests work here, and how to write one - see section 3, point 7
+│   ├── ARCHITECTURE.md      # diagrams: CDK workflow, floci environment, module wiring, VPC resources
+│   ├── diagrams/             # Mermaid (.mmd) source for every diagram in ARCHITECTURE.md
+│   └── images/               # rendered .svg for every diagram - see ARCHITECTURE.md section 5
 ├── modules/
 │   └── NN_service/          # one per AWS service - see section 3 for the exact contract
 │       ├── __init__.py
@@ -82,7 +85,11 @@ translate here.
 See [`docs/LEARNING-PATH.md`](docs/LEARNING-PATH.md) for the full list of
 44 modules, their stack ids, and which of the 11 phases each belongs to.
 `modules/03_vpc/` is the reference module every other module was written to
-match - read it before writing or editing any other module.
+match - read it before writing or editing any other module. See
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for diagrams of the CDK
+workflow, the floci local environment, the config/tagging/naming wiring
+described in this section, and how `modules/03_vpc`'s own resources relate
+to each other.
 
 ## 3. The module contract
 
@@ -215,6 +222,16 @@ passes it to every stack; a module that needs an AZ count uses `max_azs=`
 - Internal links are always relative (`[text](../other/file.md)`) and
   internal anchors are always relative to the file itself
   (`[text](#anchor)`) - never an absolute GitHub URL.
+- **Diagrams** live as a `.mmd` [Mermaid](https://mermaid.js.org/) source
+  file under [`docs/diagrams/`](docs/diagrams/) and a rendered `.svg` under
+  [`docs/images/`](docs/images/), embedded in the relevant doc with a plain
+  markdown image (`![alt text](images/name.svg)` from `docs/ARCHITECTURE.md`)
+  - never a raw ```` ```mermaid ```` fenced block, so the diagram renders
+  the same in every viewer, not only ones with Mermaid support. See
+  [`docs/ARCHITECTURE.md` section 5](docs/ARCHITECTURE.md#5-regenerating-these-diagrams)
+  for the exact `mmdc` command to regenerate an `.svg` after editing its
+  `.mmd` source, and for what "validating" a diagram means here (`mmdc`
+  exits non-zero on a syntax error instead of writing a file).
 
 ## 8. Internal anchor links and TOC
 

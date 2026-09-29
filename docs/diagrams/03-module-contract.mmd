@@ -1,0 +1,11 @@
+flowchart TD
+    Env[".env\n(CDK_PRODUCT, CDK_ENVIRONMENT,\nCDK_TEAM_OWNER, CDK_PCI, ...)"] --> Config["shared/config.py\nload_app_config() -> AppConfig\nget_environment() -> cdk.Environment | None"]
+    Config --> Stack["modules/NN_service/stack.py\nStack subclass + STACK_ID + STACK_CLASS"]
+    Tagging["shared/tagging.py\napply_standard_tags()\napply_name_tag()"] --> Stack
+    Naming["shared/naming.py\nresource_name()"] --> Stack
+    Stack --> AppPy["app.py\npkgutil.iter_modules(modules/)\nstack_class(app, stack_id, config=config, env=env)"]
+    AppPy --> Synth["app.synth() -> CloudFormation template(s)"]
+    Stack --> Test["tests/unit/test_NN_service.py"]
+    Fixture["tests/conftest.py\nconfig fixture"] --> Test
+    Helpers["tests/_helpers.py\nstack_class(), mandatory_tag_pairs()"] --> Test
+    Test --> Assertions["aws_cdk.assertions.Template\n(tags, resource counts, key properties)"]

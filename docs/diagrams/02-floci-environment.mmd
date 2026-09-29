@@ -1,0 +1,23 @@
+flowchart TB
+    subgraph Host["Developer machine"]
+        CLI["AWS CDK CLI / AWS CLI / boto3\n(AWS_ENDPOINT_URL=http://localhost:4566,\nAWS_ACCESS_KEY_ID=test)"]
+        Browser["Browser"]
+    end
+
+    subgraph Compose["docker-compose.yml (network: learning-cdk-python-floci-net)"]
+        Floci["floci\ncontainer: learning-cdk-python-floci\nport 4566\nvolumes: .floci/data, docker.sock"]
+        BuiltinUI["Built-in console\nhttp://localhost:4566/_floci/ui\n(FLOCI_SERVICES_UI_ENABLED=true)"]
+        FlociApi["floci-api\n(profile: floci-ui)\nport 4501"]
+        FlociUi["floci-ui\n(profile: floci-ui)\nport 4500"]
+        FlociDash["floci-dash\n(profile: floci-dash)\nport 9877"]
+    end
+
+    CLI -->|"AWS API calls"| Floci
+    Floci --- BuiltinUI
+    FlociApi -->|"FLOCI_ENDPOINT=http://floci:4566"| Floci
+    FlociUi -->|"API_TARGET=http://floci-api:4501"| FlociApi
+    FlociDash -->|"FLOCI_URL=http://floci:4566"| Floci
+
+    Browser -->|"localhost:4566/_floci/ui"| BuiltinUI
+    Browser -->|"localhost:4500 (optional)"| FlociUi
+    Browser -->|"localhost:9877 (optional)"| FlociDash

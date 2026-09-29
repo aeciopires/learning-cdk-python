@@ -71,6 +71,15 @@ written in English by convention.
   from zero, as a recommended (not required - `uv` can also manage Python
   on its own) way to install this repository's exact Python version,
   including Ubuntu and macOS install steps in sections 3.1/3.2.
+- `docs/ARCHITECTURE.md`: four diagrams (Mermaid source in
+  `docs/diagrams/*.mmd`, rendered `.svg` in `docs/images/`) - the CDK
+  `synth`/`deploy`/`destroy` workflow against floci or a real AWS account,
+  the `docker-compose.yml` floci/floci-ui/floci-dash console wiring, how
+  `shared/config.py`/`tagging.py`/`naming.py` feed every module's
+  `stack.py` and its unit test, and how `modules/03_vpc`'s own resources
+  (VPC, Internet Gateway, subnets, route tables, security group) relate to
+  each other. `CLAUDE.md` sections 2 and 7 document where diagram sources
+  live and how to regenerate them with `@mermaid-js/mermaid-cli`.
 - `Makefile` (`make check`, `make help`) and `scripts/check-deps.sh`:
   checks the OS/architecture against `REQUIREMENTS.md` section 1 and every
   tool in section 3 (required, recommended, and optional), printing an
