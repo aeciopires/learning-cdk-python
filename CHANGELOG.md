@@ -111,7 +111,87 @@ written in English by convention.
   HTML export must be written into `docs/slides/` itself - see the next
   entry).
 
+- `docs/IMPORTING-EXISTING-RESOURCES.md`: a standalone guide to the two
+  different things people mean by "import" in CDK - referencing an
+  existing resource without managing it (`from_bucket_arn()`,
+  `Vpc.from_lookup()`, and the difference in what each can and can't do),
+  vs. bringing a resource under full CDK management (`cdk import`'s exact
+  preconditions and workflow, and `cdk migrate`'s three sources -
+  `--from-scan`, `--from-stack`, `--from-path`), including a
+  decision table and how to practice the whole workflow against floci at
+  zero cost.
+- `examples/enterprise_stack/`: a second, deliberately different example
+  app alongside the 44 independent modules - one combined CDK app
+  assembling any subset of 13 AWS resources (IAM, VPC, KMS, S3, SQS, SNS,
+  DynamoDB, Lambda, EC2, ACM, ECS, ALB, NLB - each reusing the exact,
+  already-verified construct calls from the matching `modules/NN_service`)
+  through a small SOLID-principles framework: an abstract `ResourceBuilder`
+  interface (Dependency Inversion/Liskov Substitution), a `ResourceRegistry`
+  that topologically sorts enabled builders by their declared
+  `depends_on` and raises `MissingDependencyError`/`CircularDependencyError`
+  rather than silently guessing (Open/Closed - adding a resource never
+  touches the registry or `EnterpriseCellStack`), and per-cell
+  `environments/{dev,staging,prod}.json` config files that turn resources
+  on/off and place "cells" (this repository's existing
+  `shared/tagging.py` `cell_based`/`cell_id` fields, reused rather than
+  reinvented) in different AWS accounts/regions by editing JSON, not
+  Python - `environments/prod.json` deploys the same 13-resource cell
+  twice, in `us-east-1` and `us-west-2`. Its README explains all five
+  SOLID principles for beginners against this exact code, including a
+  from-scratch, no-code description of what the same 13 resources look
+  like *without* SOLID. 10 of its own unit/synth tests
+  (`examples/enterprise_stack/tests/`, run separately from the
+  repository's own `uv run pytest` via `pyproject.toml`'s
+  `testpaths = ["tests"]`) pass, as does `uv run mypy`/`ruff check`, and
+  `cdk synth`/`cdk list` for the `dev` and `staging` environments (`prod`
+  needs real AWS credentials for its example account, by design - see the
+  README's "Known limitations").
+- `examples/enterprise_stack/builders/ecr_builder.py`: a 14th builder,
+  `ecr` - one private ECR repository (same `ecr.Repository` call verified
+  in `modules/14_ecr/stack.py`) meant to hold a copy of the public
+  [`aeciopires/mytoolkit`](https://hub.docker.com/r/aeciopires/mytoolkit)
+  image; CDK/CloudFormation cannot copy a Docker Hub image into ECR
+  itself, so the builder's docstring (and the README's new section 8.1)
+  documents the manual `docker pull`/`tag`/`push` step, the same way
+  `modules/14_ecr/README.md` already does for its own repository.
+  `ecs` (`depends_on` now includes `"ecr"`) points its task definition at
+  that repository via `ecs.ContainerImage.from_ecr_repository()` instead
+  of the public `nginx:alpine` image `modules/15_ecs` uses, and now
+  scales 1 to 3 tasks with Application Auto Scaling's target-tracking
+  CPU-utilization policy (`service.auto_scale_task_count()` +
+  `.scale_on_cpu_utilization(target_utilization_percent=70)`, both
+  verified directly against the `aws-cdk-lib` TypeScript source since the
+  API reference website did not render as static HTML for this session -
+  see `CLAUDE.md` section 4, point 6). `alb`/`nlb` (`depends_on` now
+  includes `"ecs"`) register that same service in their target group via
+  `target_group.add_target(service)` instead of staying empty, so both
+  now actually expose the running application - AWS keeps each target
+  group in sync with the service as Application Auto Scaling adds or
+  removes tasks, with no additional code needed. 7 new tests
+  (`examples/enterprise_stack/tests/test_ecs_ecr_load_balancing.py`, 17
+  total for the example) cover: the new `depends_on` chains being
+  enforced, the container image resolving from the ECR repository (never
+  a public registry string), the autoscaling resources matching
+  `EcsResourceBuilder`'s constants, and the ECS service's own
+  `LoadBalancers` property listing both the ALB's and the NLB's target
+  groups (or just one, with only one enabled) - verified with a real
+  `cdk synth` of `environments/staging.json`, now extended to enable
+  `ecr`/`ecs`/`alb`/`nlb` together (no live AWS account needed, since
+  none of the four require a synth-time account lookup, unlike `ec2`).
+
 ### Fixed
+
+- `examples/enterprise_stack/builders/alb_builder.py` and
+  `nlb_builder.py`: caught while synthesizing `environments/prod.json`
+  (which enables both) - both builders used the same construct IDs
+  (`"TargetGroup"`, `"Listener"`) directly on the shared stack scope,
+  which `cdk synth` rejects as a duplicate construct; and both built their
+  load balancer/target group *physical* names from the full
+  product-environment-cell-purpose convention, which exceeds the 32-character
+  limit AWS enforces on ELBv2 names the moment a `cell_id` is involved.
+  Fixed by giving each pair of constructs distinct IDs and by shortening
+  just the physical name (the `Name` *tag* keeps the full convention, since
+  tags have no such limit).
 
 - `docs/slides/SLIDES-en-US.md` / `SLIDES-pt-BR.md`: the tool logos and
   live floci/floci-dash screenshots (previously `<img src="../images/tools/...">`)

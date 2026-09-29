@@ -876,6 +876,72 @@ Full explanation, from zero: [`docs/TESTING.md`](../TESTING.md)
 
 ---
 
+<!-- _class: divider -->
+
+<span class="index">05</span>
+
+<span class="kicker">Section 05</span>
+
+# 🧩 Beyond the 44 Modules
+
+Two follow-ups for when a team is ready to go past independent, one-service lessons: combining several services into one SOLID application, and bringing existing resources under CDK.
+
+---
+
+<span class="kicker"><code>examples/enterprise_stack/</code> — a second, different example</span>
+
+## One combined app, 14 resources, SOLID principles
+
+Not a 45th module — a separate CDK app showing how a team combines several of these same services into one cohesive application: enable/disable per environment, real inter-resource dependencies, no giant `if/elif` chain.
+
+<div class="cards cols-3 tight">
+  <div class="card"><h4>S — Single Responsibility</h4><p>One <code>*ResourceBuilder</code> class, one AWS resource — 13 files, 13 jobs.</p></div>
+  <div class="card"><h4>O — Open/Closed</h4><p>Add resource #14: one new file + one line in <code>builders/__init__.py</code>. Nothing else changes.</p></div>
+  <div class="card"><h4>L — Liskov Substitution</h4><p>The stack's loop calls <code>.build()</code> on any builder, interchangeably, with no special-casing.</p></div>
+  <div class="card"><h4>I — Interface Segregation</h4><p><code>ResourceContext</code> carries only <code>config</code> + a small <code>shared</code> dict — never 12 resources' worth of unused options.</p></div>
+  <div class="card"><h4>D — Dependency Inversion</h4><p><code>LambdaBuilder</code> depends on "an <code>iam_role</code> in context", never on the <code>IamBuilder</code> class itself.</p></div>
+</div>
+
+Full explanation, plus a no-code "without SOLID" comparison: [`examples/enterprise_stack/README.md`](../../examples/enterprise_stack/README.md)
+
+---
+
+<span class="kicker">Conditional resources, precedence, and "cells"</span>
+
+## Same code, different environments, accounts, and regions
+
+<div class="flow">
+  <div class="flow-row">
+    <div class="flow-box dark"><strong>environments/dev.json</strong><span>1 cell · 6 resources · no explicit account</span></div>
+    <div class="flow-box dark"><strong>environments/staging.json</strong><span>1 cell · 13 resources (full app, no EC2)</span></div>
+    <div class="flow-box accent"><strong>environments/prod.json</strong><span>2 cells · all 14 resources each</span></div>
+  </div>
+  <div class="flow-arrow down">↓</div>
+  <div class="flow-row">
+    <div class="flow-box"><strong>cell-01</strong><span><code>us-east-1</code></span></div>
+    <div class="flow-box"><strong>cell-02</strong><span><code>us-west-2</code></span></div>
+  </div>
+</div>
+
+Turning a resource on/off is listing its key in JSON; ordering (e.g. VPC before EC2) is a topological sort over each builder's `depends_on` — enabling a resource without its dependency raises a clear error, it never silently auto-enables anything. Cells reuse this repo's own `cell_based`/`cell_id` tags (`shared/tagging.py`) — the only difference between the two prod cells is 4 lines of JSON.
+
+---
+
+<span class="kicker">A question every team hits once an AWS account isn't brand new</span>
+
+## Importing existing resources into CDK
+
+| Situation | Use |
+|---|---|
+| Your code just needs to *read* a resource another stack owns | `from_*` (e.g. `Bucket.from_bucket_arn()`) — a read-only proxy, never managed |
+| You need to select a complex resource (like a VPC) by tag/default-ness | `Vpc.from_lookup()` — queries the account at synth time |
+| A known, existing resource should come under your stack's management | `cdk import` — exact preconditions and workflow documented |
+| No CDK app yet — generate one from an account scan, stack, or template | `cdk migrate --from-scan` / `--from-stack` / `--from-path` |
+
+Practice the whole workflow at zero cost against floci before ever trying it against a real account: [`docs/IMPORTING-EXISTING-RESOURCES.md`](../IMPORTING-EXISTING-RESOURCES.md)
+
+---
+
 <!-- _class: lead -->
 
 # Thank You 🎉

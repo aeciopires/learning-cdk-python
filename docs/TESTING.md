@@ -11,6 +11,10 @@
   - [Writing your own test, step by step](#writing-your-own-test-step-by-step)
   - [Common mistakes when you're new to this](#common-mistakes-when-youre-new-to-this)
   - [What these tests do *not* check](#what-these-tests-do-not-check)
+  - [Testing examples/enterprise_stack (a different shape of test)](#testing-examplesenterprise_stack-a-different-shape-of-test)
+    - [Why it's a separate test suite](#why-its-a-separate-test-suite)
+    - [Two kinds of test, and why both exist](#two-kinds-of-test-and-why-both-exist)
+    - [How to test a new builder, step by step](#how-to-test-a-new-builder-step-by-step)
   - [References](#references)
 
 <!-- TOC -->
@@ -233,8 +237,105 @@ behavior differences. Each module's README "Deploy with floci" section is
 how you check those - unit tests and an actual deploy answer different
 questions, and this repository uses both.
 
+## Testing examples/enterprise_stack (a different shape of test)
+
+[`examples/enterprise_stack/`](../examples/enterprise_stack/README.md) - the
+SOLID/builder-pattern combined-stack example, see its own README for what
+it is - has its own tests, in
+[`examples/enterprise_stack/tests/`](../examples/enterprise_stack/tests/),
+written in the same `aws_cdk.assertions` style this page has explained so
+far, plus one kind of test the 44 modules above never need. This section
+covers only what's *different* there - everything above still applies.
+
+### Why it's a separate test suite
+
+Two concrete differences from every `tests/unit/test_NN_service.py` file:
+
+- **It isn't discovered by a bare `uv run pytest`.** This repository's
+  `pyproject.toml` sets `testpaths = ["tests"]`, so pytest never looks
+  inside `examples/` unless told to. Run these explicitly:
+  ```bash
+  uv run pytest examples/enterprise_stack/tests/ -v
+  ```
+- **No `stack_class()`, no shared `config` fixture.** Those two helpers
+  (`tests/_helpers.py`, `tests/conftest.py`) exist specifically to import
+  a `modules/NN_service/stack.py` (whose directory name starts with a
+  digit - see [Reading your first test, line by line](#reading-your-first-test-line-by-line))
+  and to hand every module test the same fixed `AppConfig`.
+  `examples/enterprise_stack/stack.py` is an ordinary, digit-free import
+  (`from examples.enterprise_stack.stack import EnterpriseCellStack`), and
+  its tests build their own `AppConfig` directly with a small local
+  `_config()` helper (each test file defines its own copy - there's no
+  shared `examples/enterprise_stack/tests/conftest.py`, since only two
+  files need it so far).
+
+### Two kinds of test, and why both exist
+
+- **Synth-level tests** (`test_stack_synth.py`, `test_ecs_ecr_load_balancing.py`) -
+  the same technique as every module test above: build a real
+  `EnterpriseCellStack` with `aws_cdk.assertions`, assert on the
+  synthesized template. These catch anything a module test would: a
+  missing tag, a wrong property, the wrong number of resources for a given
+  `enabled_keys` set.
+- **Pure-Python precedence tests** (`test_registry.py`) - these test
+  `core/resource_registry.py`'s topological-sort/validation logic using
+  tiny fake `ResourceBuilder` subclasses that don't touch AWS CDK
+  *at all* - no `cdk.App()`, no `Template.from_stack()`, no CloudFormation
+  anywhere. This is only possible because of how the example is designed
+  (see `examples/enterprise_stack/README.md`,
+  [section 2.1](../examples/enterprise_stack/README.md#21---s-single-responsibility-principle)
+  and [2.5](../examples/enterprise_stack/README.md#25---d-dependency-inversion-principle)):
+  `ResourceRegistry.ordered()` only ever calls `.key` and `.depends_on` on
+  whatever it's given - it has no idea a real `ResourceBuilder` eventually
+  calls into `aws_cdk`, so a test can hand it a fake one instead and the
+  ordering/validation logic runs exactly the same, in well under a
+  millisecond. This is a concrete example of *designing for testability*:
+  splitting "decide the order" from "actually build AWS resources" into
+  separate objects is what makes the first half testable without the
+  second half existing at all.
+
+### How to test a new builder, step by step
+
+Adding builder #15 (see `examples/enterprise_stack/README.md`,
+[section 11](../examples/enterprise_stack/README.md#11-extending-it-adding-resource-15))?
+Write its test the same way `test_ecs_ecr_load_balancing.py` tests `ecr`:
+
+1. **Build only what you need enabled.** Reuse or copy the `_build(enabled_keys)`
+   helper pattern - it constructs a fresh `cdk.App()` and
+   `EnterpriseCellStack` for exactly the `enabled_keys` set your test
+   cares about, nothing more:
+   ```python
+   def test_my_new_resource_has_the_property_i_expect():
+       template = _build({"vpc", "my_new_key"})
+       template.has_resource_properties("AWS::Some::Type", {...})
+   ```
+2. **If your builder has a `depends_on`, test that it's enforced** - enable
+   it *without* its dependency and confirm `MissingDependencyError` is
+   raised before any CDK construct is even created:
+   ```python
+   def test_my_new_resource_depends_on_vpc():
+       with pytest.raises(MissingDependencyError):
+           _build({"my_new_key"})
+   ```
+3. **If your builder reads `context.shared`**, add a test confirming it
+   uses the *shared* construct rather than creating its own (the same
+   shape as `test_lambda_reuses_the_iam_builders_role_not_its_own` in
+   `test_stack_synth.py`, or `test_ecs_task_uses_the_ecr_repository_not_a_public_image`
+   in `test_ecs_ecr_load_balancing.py`) - assert a resource count of `1`
+   where a bug would produce `2`, or inspect the actual rendered property
+   (an ARN reference, an image URI) to confirm it points at the shared
+   construct and not a hardcoded fallback.
+4. **Run it and watch it fail first**, the same discipline as every module
+   test above:
+   ```bash
+   uv run pytest examples/enterprise_stack/tests/ -v
+   ```
+
 ## References
 
 - [AWS CDK v2 Developer Guide - Testing constructs](https://docs.aws.amazon.com/cdk/v2/guide/testing.html)
 - [AWS CDK API Reference (Python) - `aws_cdk.assertions`](https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.assertions/)
 - [pytest documentation - fixtures](https://docs.pytest.org/en/stable/how-to/fixtures.html)
+- [`examples/enterprise_stack/README.md`](../examples/enterprise_stack/README.md) -
+  what the example is, and section 2 for the SOLID principles its
+  testability rests on.

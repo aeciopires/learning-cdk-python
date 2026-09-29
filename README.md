@@ -69,6 +69,8 @@ uv run cdk destroy IamStack           # and clean it up when you're done
 | The full 44-module path, grouped into 11 phases | [`docs/LEARNING-PATH.md`](docs/LEARNING-PATH.md) |
 | Diagrams: the CDK workflow, the floci local environment, and how AWS resources relate to each other | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) |
 | Slide decks covering the tooling and the hands-on lab (en-US / pt-BR) | [`docs/slides/SLIDES-en-US.md`](docs/slides/SLIDES-en-US.md) · [`docs/slides/SLIDES-pt-BR.md`](docs/slides/SLIDES-pt-BR.md) |
+| Referencing vs. fully importing an existing (manually-created or legacy) AWS resource | [`docs/IMPORTING-EXISTING-RESOURCES.md`](docs/IMPORTING-EXISTING-RESOURCES.md) |
+| A combined, SOLID/builder-pattern example app (past the 44 independent modules) | [`examples/enterprise_stack/README.md`](examples/enterprise_stack/README.md) |
 | Conventions for anyone (human or AI assistant) extending this repository | [`CLAUDE.md`](CLAUDE.md) |
 | Changelog | [`CHANGELOG.md`](CHANGELOG.md) |
 

@@ -1,0 +1,22 @@
+{
+  "cells": [
+    {
+      "cell_id": "cell-01",
+      "account": "111111111111",
+      "region": "us-east-1",
+      "enabled_resources": [
+        "iam", "vpc", "kms", "s3", "sqs", "sns", "dynamodb", "lambda",
+        "ec2", "acm", "ecr", "ecs", "alb", "nlb"
+      ]
+    },
+    {
+      "cell_id": "cell-02",
+      "account": "111111111111",
+      "region": "us-west-2",
+      "enabled_resources": [
+        "iam", "vpc", "kms", "s3", "sqs", "sns", "dynamodb", "lambda",
+        "ec2", "acm", "ecr", "ecs", "alb", "nlb"
+      ]
+    }
+  ]
+}

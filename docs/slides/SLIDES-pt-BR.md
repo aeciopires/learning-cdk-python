@@ -877,6 +877,72 @@ Explicação completa, do zero: [`docs/TESTING.md`](../TESTING.md)
 
 ---
 
+<!-- _class: divider -->
+
+<span class="index">05</span>
+
+<span class="kicker">Seção 05</span>
+
+# 🧩 Além dos 44 Módulos
+
+Dois desdobramentos para quando um time está pronto para ir além de lições independentes de um serviço: combinar vários serviços em uma aplicação SOLID, e trazer recursos já existentes para o CDK.
+
+---
+
+<span class="kicker"><code>examples/enterprise_stack/</code> — um segundo exemplo, diferente</span>
+
+## Uma aplicação combinada, 14 recursos, princípios SOLID
+
+Não é um 45º módulo — é uma aplicação CDK separada mostrando como um time combina vários desses mesmos serviços em uma aplicação coesa: habilitar/desabilitar por ambiente, dependências reais entre recursos, sem uma cadeia gigante de `if/elif`.
+
+<div class="cards cols-3 tight">
+  <div class="card"><h4>S — Responsabilidade Única</h4><p>Uma classe <code>*ResourceBuilder</code>, um recurso AWS — 13 arquivos, 13 responsabilidades.</p></div>
+  <div class="card"><h4>O — Aberto/Fechado</h4><p>Adicionar o recurso #14: um arquivo novo + uma linha em <code>builders/__init__.py</code>. Nada mais muda.</p></div>
+  <div class="card"><h4>L — Substituição de Liskov</h4><p>O loop da stack chama <code>.build()</code> em qualquer builder, de forma intercambiável, sem casos especiais.</p></div>
+  <div class="card"><h4>I — Segregação de Interface</h4><p><code>ResourceContext</code> carrega só <code>config</code> + um pequeno dicionário <code>shared</code> — nunca as opções de 12 recursos não usados.</p></div>
+  <div class="card"><h4>D — Inversão de Dependência</h4><p><code>LambdaBuilder</code> depende de "um <code>iam_role</code> no contexto", nunca da classe <code>IamBuilder</code> em si.</p></div>
+</div>
+
+Explicação completa, mais uma comparação sem código do "sem SOLID": [`examples/enterprise_stack/README.md`](../../examples/enterprise_stack/README.md)
+
+---
+
+<span class="kicker">Recursos condicionais, precedência e "células"</span>
+
+## O mesmo código, ambientes, contas e regiões diferentes
+
+<div class="flow">
+  <div class="flow-row">
+    <div class="flow-box dark"><strong>environments/dev.json</strong><span>1 célula · 6 recursos · sem conta explícita</span></div>
+    <div class="flow-box dark"><strong>environments/staging.json</strong><span>1 célula · 13 recursos (app completa, sem EC2)</span></div>
+    <div class="flow-box accent"><strong>environments/prod.json</strong><span>2 células · todos os 14 recursos cada</span></div>
+  </div>
+  <div class="flow-arrow down">↓</div>
+  <div class="flow-row">
+    <div class="flow-box"><strong>cell-01</strong><span><code>us-east-1</code></span></div>
+    <div class="flow-box"><strong>cell-02</strong><span><code>us-west-2</code></span></div>
+  </div>
+</div>
+
+Ligar/desligar um recurso é listar sua chave no JSON; a ordem (ex.: VPC antes do EC2) é uma ordenação topológica sobre o `depends_on` de cada builder — habilitar um recurso sem sua dependência gera um erro claro, nunca habilita nada silenciosamente. As células reaproveitam as próprias tags `cell_based`/`cell_id` deste repositório (`shared/tagging.py`) — a única diferença entre as duas células de prod são 4 linhas de JSON.
+
+---
+
+<span class="kicker">Uma pergunta que todo time enfrenta quando a conta AWS deixa de ser nova</span>
+
+## Importando recursos existentes para o CDK
+
+| Situação | Uso |
+|---|---|
+| Seu código só precisa *ler* um recurso que outra stack possui | `from_*` (ex.: `Bucket.from_bucket_arn()`) — um proxy somente leitura, nunca gerenciado |
+| Você precisa selecionar um recurso complexo (como uma VPC) por tag/padrão | `Vpc.from_lookup()` — consulta a conta em tempo de síntese |
+| Um recurso conhecido e existente deve passar a ser gerenciado pela sua stack | `cdk import` — pré-condições e fluxo exatos documentados |
+| Ainda não há aplicação CDK — gerar uma a partir de uma varredura de conta, stack ou template | `cdk migrate --from-scan` / `--from-stack` / `--from-path` |
+
+Pratique o fluxo inteiro sem custo algum contra o floci antes de tentar em uma conta real: [`docs/IMPORTING-EXISTING-RESOURCES.md`](../IMPORTING-EXISTING-RESOURCES.md)
+
+---
+
 <!-- _class: lead -->
 
 # Obrigado 🎉

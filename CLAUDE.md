@@ -71,6 +71,7 @@ whenever one is edited.
 │   ├── LEARNING-PATH.md    # the full 44-module table, grouped into 11 phases
 │   ├── TESTING.md           # how CDK unit tests work here, and how to write one - see section 3, point 7
 │   ├── ARCHITECTURE.md      # diagrams: CDK workflow, floci environment, module wiring, VPC resources
+│   ├── IMPORTING-EXISTING-RESOURCES.md  # from_* references vs. cdk import vs. cdk migrate
 │   ├── diagrams/             # Mermaid (.mmd) source for every diagram in ARCHITECTURE.md
 │   ├── images/               # rendered .svg for every diagram - see ARCHITECTURE.md section 5
 │   │   └── tools/             # official floci/AWS CDK logos + live floci/floci-dash screenshots - maintained originals; SLIDES-*.md embeds them as base64 data URIs, see REQUIREMENTS.md section 11.2
@@ -80,6 +81,10 @@ whenever one is edited.
 │       ├── __init__.py
 │       ├── stack.py
 │       └── README.md
+├── examples/
+│   └── enterprise_stack/    # a separate, combined SOLID/builder-pattern CDK app - NOT bound by
+│                             # the module contract below, not auto-discovered by the root app.py,
+│                             # and not part of docs/LEARNING-PATH.md - see its own README.md
 └── tests/
     ├── conftest.py            # the shared `config` pytest fixture
     ├── _helpers.py             # stack_class() / mandatory_tag_pairs() - see docs/TESTING.md
@@ -102,6 +107,13 @@ to each other.
 `modules/`) instead of importing each one by name, so adding a module never
 requires editing `app.py`. This only works because every `modules/NN_service/stack.py`
 follows the same contract:
+
+**This contract applies only to `modules/NN_service/`.** `examples/enterprise_stack/`
+is a deliberately different shape (one combined stack assembling several
+AWS services, not one lesson per service) with its own `app.py`, its own
+tests, and its own README - see
+[`examples/enterprise_stack/README.md`, section 1](examples/enterprise_stack/README.md#1-what-this-is-and-why-it-lives-outside-modules)
+for why it is not a 45th module.
 
 1. A `Stack` subclass whose `__init__` signature is exactly
    `(self, scope: Construct, construct_id: str, *, config: AppConfig, **kwargs) -> None`

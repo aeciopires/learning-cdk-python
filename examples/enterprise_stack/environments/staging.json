@@ -1,0 +1,11 @@
+{
+  "cells": [
+    {
+      "cell_id": "cell-01",
+      "enabled_resources": [
+        "iam", "vpc", "kms", "s3", "sqs", "sns", "dynamodb", "lambda", "acm",
+        "ecr", "ecs", "alb", "nlb"
+      ]
+    }
+  ]
+}
