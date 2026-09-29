@@ -39,9 +39,12 @@ placeholder team/environment values, never a real company's internals.
 
 **Root meta files stay English-only.** `CLAUDE.md`, `CONTRIBUTING.md`,
 `CHANGELOG.md`, and `REQUIREMENTS.md` are English only, by the maintainer's
-explicit choice. This repository has no bilingual documentation tree to
-keep in parity - unlike some sibling repositories, there is nothing to
-translate here.
+explicit choice. This repository has no bilingual *documentation* tree to
+keep in parity - unlike some sibling repositories, module READMEs and the
+`docs/` guides are English only. The one bilingual pair is
+`docs/slides/SLIDES-en-US.md` / `docs/slides/SLIDES-pt-BR.md` (see
+[section 2](#2-directory-and-file-structure)) - keep both decks in sync
+whenever one is edited.
 
 ## 2. Directory and file structure
 
@@ -69,7 +72,9 @@ translate here.
 │   ├── TESTING.md           # how CDK unit tests work here, and how to write one - see section 3, point 7
 │   ├── ARCHITECTURE.md      # diagrams: CDK workflow, floci environment, module wiring, VPC resources
 │   ├── diagrams/             # Mermaid (.mmd) source for every diagram in ARCHITECTURE.md
-│   └── images/               # rendered .svg for every diagram - see ARCHITECTURE.md section 5
+│   ├── images/               # rendered .svg for every diagram - see ARCHITECTURE.md section 5
+│   │   └── tools/             # official floci/AWS CDK logos + live floci/floci-dash screenshots - maintained originals; SLIDES-*.md embeds them as base64 data URIs, see REQUIREMENTS.md section 11.2
+│   └── slides/               # Marp slide decks (en-US/pt-BR) - see REQUIREMENTS.md section 11
 ├── modules/
 │   └── NN_service/          # one per AWS service - see section 3 for the exact contract
 │       ├── __init__.py

@@ -27,3 +27,10 @@ cdk.context.json
 .vscode/
 .idea/
 .DS_Store
+
+# Slides output
+slides-en.html
+slides-pt.html
+slides-en.pdf
+slides-en.pptx
+slide.png

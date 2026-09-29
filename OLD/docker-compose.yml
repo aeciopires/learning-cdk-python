@@ -1,0 +1,63 @@
+services:
+  floci-ui:
+    build:
+      context: ./packages/frontend
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./packages/frontend/src:/app/src
+      - ./packages/frontend/index.html:/app/index.html
+      - ./packages/frontend/vite.config.ts:/app/vite.config.ts
+      - ./packages/frontend/tsconfig.json:/app/tsconfig.json
+      - ./packages/frontend/tsconfig.node.json:/app/tsconfig.node.json
+    ports:
+      - "4500:4500"
+    environment:
+      API_TARGET: http://floci-api:4501
+      VITE_USE_POLLING: "true"
+    depends_on:
+      - floci-api
+    networks:
+      - floci_default
+
+  floci-api:
+    build:
+      context: ./packages/api
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./packages/api/src:/app/src
+    ports:
+      - "4501:4501"
+    environment:
+      FLOCI_ENDPOINT: http://floci:4566
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      PORT: "4501"
+    depends_on:
+      - floci
+    networks:
+      - floci_default
+
+  floci:
+    image: floci/floci:latest-compat
+    ports:
+      - "4566:4566"
+    volumes:
+      # Floci runs Lambda functions in throwaway containers, so it needs the host
+      # Docker daemon. Without this, invoke fails with "Failed to start Lambda
+      # container". This grants the emulator control of host Docker — acceptable
+      # for a local dev stack, and the same mount the README's docker run uses.
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./data:/app/data
+      - ./init/ready.d:/etc/floci/init/ready.d:ro
+      - ./init/files:/etc/floci/init/files:ro
+    environment:
+      FLOCI_STORAGE_MODE: persistent
+    networks:
+      floci_default:
+        aliases:
+          - localhost.floci.io
+
+networks:
+  floci_default:
+    name: floci_default

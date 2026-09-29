@@ -91,8 +91,76 @@ written in English by convention.
   walkthrough (now 9 steps) and `CONTRIBUTING.md`'s workflow as the first
   command to run in a fresh clone.
 
+- `docs/slides/SLIDES-en-US.md` and `docs/slides/SLIDES-pt-BR.md`: a
+  [Marp](https://marp.app) slide deck (bilingual pair, kept in parity, 35
+  slides each) covering this repository's tooling (uv, AWS CDK v2/`aws-cdk-lib`,
+  `pytest`/`mypy`/`ruff`, Docker Compose) with a focus on the AWS CDK
+  workflow and floci - including its built-in console, the standalone
+  `floci-ui` project, and `floci-dash` - plus the commands to run the
+  hands-on lab, embedding the four diagrams already under `docs/images/`.
+  Also embeds, under `docs/images/tools/`: the official AWS CDK and floci
+  logos (from `aws/aws-cdk` and `floci-io/floci`'s own repos), the official
+  floci-dash icon (`ofsazib/floci-dash`), direct quotes from each project's
+  own README/homepage, and two screenshots (the built-in floci console and
+  floci-dash) captured live against this repository's own
+  `docker compose up -d floci`, with `IamStack`, `SqsStack`, `SnsStack`,
+  `DynamoDbStack`, `KmsStack`, and `ParameterStoreStack` actually deployed
+  to it. `REQUIREMENTS.md` section 11 documents how to install Marp CLI and
+  render/export the decks to HTML/PDF/PPTX (`--allow-local-files` is
+  required for the local images on the PDF/PPTX/PNG export paths, and the
+  HTML export must be written into `docs/slides/` itself - see the next
+  entry).
+
 ### Fixed
 
+- `docs/slides/SLIDES-en-US.md` / `SLIDES-pt-BR.md`: the tool logos and
+  live floci/floci-dash screenshots (previously `<img src="../images/tools/...">`)
+  broke in exported HTML whenever the output file was written outside
+  `docs/slides/` (a Desktop folder, the repo root, ...) - a browser
+  resolves a relative `src` against the *exported* file's location, and
+  Marp CLI never embeds referenced images into HTML output, only the
+  theme's CSS. Fixed by embedding all 7 images as inline
+  `data:image/...;base64,...` URIs directly in both decks, so every
+  export format (HTML/PDF/PPTX/PNG) now works from any output directory
+  with no extra step. The maintained original files stay under
+  `docs/images/tools/` - see `REQUIREMENTS.md` section 11.2 for how to
+  regenerate a data URI after replacing one. Trade-off: both `.md` files
+  grew from ~50 KB to ~1.5 MB.
+- `docs/slides/SLIDES-en-US.md` / `SLIDES-pt-BR.md`: the four embedded
+  Mermaid SVGs (`01-cdk-workflow.svg` through `04-vpc-resources.svg`)
+  rendered far too small on a 16:9 slide - `01-cdk-workflow.svg` in
+  particular is a 553×1830 portrait flowchart, so fitting it inside a
+  460px-tall slide left it barely 140px wide. Replaced all four with
+  native HTML/CSS flow diagrams (new `.flow`/`.flow-box`/`.flow-arrow`
+  and `.az-grid`/`.az-col` theme components) built from the same content
+  as the underlying `.mmd` sources, sized to fill the slide and read at
+  full font size; each slide still links to the full Mermaid diagram
+  under `docs/images/` and the matching `docs/ARCHITECTURE.md` section
+  for the authoritative, more detailed version.
+- `REQUIREMENTS.md` section 11.2: the documented `-o slides-en.html`
+  command wrote the exported file to the repository root, one directory
+  above where the deck's `../images/...` paths actually resolve from -
+  every image (including the two new tool-logo rows) rendered as a
+  broken-image icon. Marp CLI inlines the theme's CSS into HTML output but
+  never embeds `<img>` sources, and a browser resolves a relative `src`
+  against the *exported* file's own location, not the source `.md`'s - so
+  the fix is exporting into `docs/slides/` (where the source file already
+  lives), not a CLI flag. PDF/PPTX/PNG export were unaffected (Chromium
+  resolves those relative to the source `.md` regardless of `-o`), but the
+  commands now write next to the source consistently either way.
+- `docs/slides/SLIDES-en-US.md` / `SLIDES-pt-BR.md`: the "From identity to
+  governance" slide's 11-card `cols-3` grid overlapped the footer/page
+  number. Added a `.tight` grid modifier (smaller card padding/font) for
+  this one densely-populated grid, applied only to that slide.
+- `docker-compose.yml`: the `floci` service's `healthcheck` used `curl`,
+  which the `floci/floci` image does not ship (a minimal native-binary
+  image) - every attempt failed with `curl: executable file not found`,
+  so the container never reported `healthy` and `floci-dash`'s
+  `depends_on: condition: service_healthy` would wait forever. Now probes
+  the port with bash's own `/dev/tcp` instead (bash is present in the
+  image). Found and fixed while capturing the live floci/floci-dash
+  screenshots for `docs/slides/SLIDES-*.md` above; verified against a real
+  `docker compose --profile floci-dash up -d` run.
 - `modules/03_vpc/stack.py`: read route table IDs from `vpc.isolated_subnets`
   instead of the (empty, for a `PRIVATE_ISOLATED`-only VPC) `vpc.private_subnets`.
 - `modules/19_rds_postgresql` and `modules/20_rds_aurora`: master username

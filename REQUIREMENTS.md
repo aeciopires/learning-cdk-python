@@ -21,7 +21,11 @@
   - [8. Naming policy](#8-naming-policy)
   - [9. Flexible account and region](#9-flexible-account-and-region)
   - [10. Observations and limitations](#10-observations-and-limitations)
-  - [11. References](#11-references)
+  - [11. Building, rendering and exporting the slide decks (Marp)](#11-building-rendering-and-exporting-the-slide-decks-marp)
+    - [11.1 - Installing Marp CLI](#111---installing-marp-cli)
+    - [11.2 - Rendering and exporting `docs/slides/SLIDES-*.md`](#112---rendering-and-exporting-docsslidesslides-md)
+    - [11.3 - Enabling HTML in a live preview (VS Code / marp.app)](#113---enabling-html-in-a-live-preview-vs-code--marpapp)
+  - [12. References](#12-references)
 
 <!-- TOC -->
 
@@ -175,6 +179,7 @@ go, and tells you exactly what to install.
 | AWS CLI | v2 | recommended | used in every module's "Verify" section, pointed at floci or at a real account |
 | git | 2.x | yes | - |
 | floci CLI | latest | optional | an alternative to `docker compose` for running floci - see [section 5.2](#52---option-b-floci-cli) |
+| [Marp CLI](https://github.com/marp-team/marp-cli) (`@marp-team/marp-cli`) | latest | optional | render/export `docs/slides/SLIDES-*.md` to HTML/PDF/PPTX - see [section 11](#11-building-rendering-and-exporting-the-slide-decks-marp) |
 
 > **Guardrail:** the `aws-cdk-lib`/`constructs` version pins in
 > [`pyproject.toml`](pyproject.toml) and the `floci/floci:latest` image tag in
@@ -605,9 +610,120 @@ for the same reason.
   has a "Notes and cautions" section calling this out explicitly before its
   optional "Deploy to real AWS" instructions.
 
-## 11. References
+## 11. Building, rendering and exporting the slide decks (Marp)
+
+[`docs/slides/SLIDES-en-US.md`](docs/slides/SLIDES-en-US.md) and
+[`docs/slides/SLIDES-pt-BR.md`](docs/slides/SLIDES-pt-BR.md) are
+[Marp](https://marp.app) decks (plain Markdown with a `marp: true` front
+matter and a `---`-separated slide, plus a self-contained custom CSS
+theme) covering this repository's tooling - AWS CDK v2, uv, and floci
+(with its `floci-ui`/`floci-dash` consoles) in particular - and how to run
+the hands-on lab. They can be edited as plain text, but rendering them to
+HTML/PDF/PPTX or previewing them with full styling needs the Marp
+toolchain below.
+
+### 11.1 - Installing Marp CLI
+
+No install is required for one-off use - `npx` downloads and runs it on
+demand:
+
+```bash
+npx @marp-team/marp-cli@latest --version
+```
+
+For repeated use, install it globally instead:
+
+```bash
+npm install -g @marp-team/marp-cli
+marp --version
+```
+
+Rendering to PDF or PPTX drives a headless Chromium under the hood (via
+Puppeteer). Marp CLI downloads/uses a bundled Chromium automatically on
+first run in most environments; on a minimal Linux server you may
+additionally need the system libraries Chromium depends on (fonts,
+`libnss3`, `libatk*`, etc. - see the Puppeteer troubleshooting reference
+below) if the export fails with a browser-launch error.
+
+### 11.2 - Rendering and exporting `docs/slides/SLIDES-*.md`
+
+Both decks embed the official floci/AWS CDK logos and the two screenshots
+captured from this repository's own running floci stack (see
+[section 5](#5-running-floci-the-local-aws-emulator)) as inline
+`data:image/...;base64,...` URIs directly in the Markdown - **not** as
+`<img src="../images/tools/...">` links to the source PNG/SVG files under
+[`docs/images/tools/`](docs/images/tools/) (those files still exist in the
+repo as the maintained originals the data URIs were generated from, and as
+standalone assets other docs can link to). This is deliberate: an earlier
+version of this deck referenced them by relative path, which broke in two
+different ways depending on export format -
+
+- **HTML export** never embeds referenced images at all (only the theme's
+  CSS is inlined) - a browser resolves a `src` **relative to the exported
+  `.html` file's own location**, not the source `.md`'s, so exporting
+  anywhere other than the file's own directory (the repository root, a
+  Desktop folder, ...) broke every image.
+- **PDF/PPTX/PNG export** additionally needs `--allow-local-files`
+  (Chromium blocks local file reads by default) - without it, every image
+  silently renders missing even though the command "succeeds".
+
+Data URIs sidestep both failure modes - the image bytes travel with the
+Markdown itself, so every export format works from **any** output
+directory with no extra flag beyond the PDF/PPTX/PNG ones below (which are
+about Chromium's local-file sandbox at conversion time, unrelated to
+images). The tradeoff is size: both `.md` source files are ~1.5 MB instead
+of ~50 KB. If you regenerate a screenshot or logo, re-run the same
+base64-encoding step against the new file under `docs/images/tools/` and
+replace the matching `data:...;base64,...` value.
+
+```bash
+# HTML - works from any output directory, e.g. straight to your Desktop
+npx @marp-team/marp-cli@latest docs/slides/SLIDES-en-US.md -o ~/Desktop/slides-en.html
+npx @marp-team/marp-cli@latest docs/slides/SLIDES-pt-BR.md -o ~/Desktop/slides-pt.html
+
+# PDF (one page per slide) - --allow-local-files is still required (see above)
+npx @marp-team/marp-cli@latest docs/slides/SLIDES-en-US.md --pdf --allow-local-files -o ~/Desktop/slides-en.pdf
+
+# PowerPoint (.pptx, editable in PowerPoint/Keynote/Google Slides)
+npx @marp-team/marp-cli@latest docs/slides/SLIDES-en-US.md --pptx --allow-local-files -o ~/Desktop/slides-en.pptx
+
+# One PNG image per slide (useful for a quick visual review)
+npx @marp-team/marp-cli@latest docs/slides/SLIDES-en-US.md --images png --allow-local-files -o ~/Desktop/slide.png
+
+# Watch mode: re-render on every save while editing
+npx @marp-team/marp-cli@latest -w docs/slides/SLIDES-en-US.md -o docs/slides/slides-en.html
+```
+
+Verify any export before trusting it: open the HTML file (or PDF/PPTX) and
+confirm the AWS CDK/floci logos on the first slide actually render - the
+fastest way to catch a broken-path regression.
+
+Exported files are build artifacts - don't commit them; add any output
+filename pattern you use locally to your own git excludes if needed.
+
+### 11.3 - Enabling HTML in a live preview (VS Code / marp.app)
+
+Both slide decks rely on inline HTML (`<div class="card">…</div>`, etc.)
+and CSS classes defined in their own front matter for the card grids,
+step diagrams, and stat callouts - this is standard Marp usage, but
+several Marp viewers disable raw HTML **by default** as an XSS precaution
+for untrusted files, which makes the deck render as plain, unstyled text
+(the cards/steps collapse to bare paragraphs). Marp CLI (section 11.2)
+already renders HTML by default, so exported HTML/PDF/PPTX files are
+unaffected - this only matters for **live preview**:
+
+- **VS Code, "Marp for VS Code" extension:** open Settings and enable
+  `markdown.marp.html` (or add `"markdown.marp.html": true` to
+  `settings.json`), then reopen the preview.
+- **[marp.app](https://marp.app) (web editor):** use the editor's
+  settings/gear menu to enable HTML rendering for the deck before
+  previewing.
+
+## 12. References
 
 - [floci - Local AWS Emulator](https://floci.io) · [github.com/floci-io/floci](https://github.com/floci-io/floci) · [github.com/floci-io/floci-cli](https://github.com/floci-io/floci-cli) · [github.com/floci-io/floci-ui](https://github.com/floci-io/floci-ui)
+- [Marp CLI](https://github.com/marp-team/marp-cli) · [Marp for VS Code](https://marketplace.visualstudio.com/items?itemName=marp-team.marp-vscode) · [marp.app](https://marp.app) · [Marpit - `html` and other Markdown directives](https://marpit.marp.app/directives)
+- [Puppeteer - Troubleshooting (headless Chromium system dependencies on Linux)](https://pptr.dev/troubleshooting)
 - [uv - Getting started](https://docs.astral.sh/uv/getting-started/installation/)
 - [mise - Getting started](https://mise.jdx.dev/getting-started.html) · [mise - Installing mise](https://mise.jdx.dev/installing-mise.html)
 - [AWS CDK v2 Developer Guide - Working with the AWS CDK in Python](https://docs.aws.amazon.com/cdk/v2/guide/work-with-cdk-python.html)

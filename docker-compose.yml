@@ -36,9 +36,11 @@ services:
     # Lets the optional floci-ui/floci-dash profiles below wait for floci to
     # actually be ready (depends_on: condition: service_healthy) instead of
     # just "started" - see floci-dash's own docker-compose.yml (top-of-file
-    # reference), which uses the same endpoint.
+    # reference), which uses the same endpoint. The floci/floci image is a
+    # minimal native binary with no curl/wget - bash's own /dev/tcp is used
+    # instead to probe the port (bash is present in the image; curl is not).
     healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost:4566/_floci/health"]
+      test: ["CMD", "bash", "-c", "echo > /dev/tcp/127.0.0.1/4566"]
       interval: 10s
       timeout: 5s
       retries: 30
