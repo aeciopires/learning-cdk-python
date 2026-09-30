@@ -224,7 +224,8 @@ curl -fsSL https://floci.io/install.sh | sh
 #   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
 brew install --cask docker      # Docker Desktop - open the app at least once
-brew install uv mise git
+brew install uv git
+curl https://mise.run | sh
 echo 'eval "$(mise activate zsh)"' >> ~/.zshrc   # Zsh (macOS default); other shells: section 3.3
 brew install floci-io/floci/floci-cli   # optional - see section 5.2
 ```
