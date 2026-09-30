@@ -58,12 +58,12 @@ whenever one is edited.
 ├── CLAUDE.md              # this file
 ├── pyproject.toml         # uv-managed dependencies (aws-cdk-lib, constructs, boto3, dev tools)
 ├── .python-version        # the Python version uv builds .venv/ with
-├── mise.toml               # same Python version + the AWS CLI v2, for mise (recommended - REQUIREMENTS.md section 3.3)
+├── mise.toml               # Python, Node.js 26, npm 11, and the AWS CLI v2, for mise (recommended - REQUIREMENTS.md section 3.3)
 ├── cdk.json                # "app": "uv run python app.py" - see section 9
 ├── app.py                  # discovers and instantiates every module's stack - see section 3
 ├── docker-compose.yml      # floci (local AWS emulator + floci-ui/floci-dash consoles)
 ├── .env.example             # every CDK_*/AWS_* variable a module reads, with comments
-├── Makefile                 # `make check` - see scripts/check-deps.sh and REQUIREMENTS.md section 3.4
+├── Makefile                 # `make check` (scripts/check-deps.sh, REQUIREMENTS.md section 3.4) and `make typecheck` (mypy)
 ├── scripts/
 │   └── check-deps.sh          # what `make check` runs - OS + every tool in REQUIREMENTS.md section 3
 ├── shared/                  # tagging.py, naming.py, config.py - see section 5 and 6

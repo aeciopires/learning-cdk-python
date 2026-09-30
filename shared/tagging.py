@@ -61,7 +61,9 @@ def apply_standard_tags(scope: IConstruct, *, tags: StandardTags) -> None:
     Tags.of(scope).add("team-owner", tags.team_owner)
     Tags.of(scope).add("pci", "true" if tags.pci else "false")
     Tags.of(scope).add("cell-based", "true" if tags.cell_based else "false")
-    if tags.cell_based:
+    # __post_init__ guarantees cell_id is set whenever cell_based is True;
+    # checking both also narrows cell_id from `str | None` to `str` for mypy.
+    if tags.cell_based and tags.cell_id:
         Tags.of(scope).add("cell-id", tags.cell_id)
 
 

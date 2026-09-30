@@ -4,12 +4,21 @@
 #
 # - python: kept in sync with .python-version, which `uv` reads for the
 #   same purpose - see REQUIREMENTS.md section 4.
+# - node: Node.js 26, which runs the AWS CDK Toolkit (`cdk`, installed with
+#   `npm install -g aws-cdk`) and the optional Marp/Mermaid CLIs via `npx`.
+#   "26" means "the latest 26.x release".
+# - npm: npm 11, pinned separately (registry backend `aqua:npm/cli`) so the
+#   npm version doesn't silently follow whatever Node.js happens to bundle.
+#   It takes precedence over the npm bundled with Node.js.
 # - aws-cli: the AWS CLI v2 (`aws` binary), used in every module's
 #   "Verify" section. mise installs it from the official aws/aws-cli
 #   release (registry backend `aqua:aws/aws-cli`); "2" means "the latest
-#   2.x release" - pin a full version (e.g. "2.37.6") for a fully
-#   reproducible install. Re-check the current releases with
-#   `mise ls-remote aws-cli` before pinning.
+#   2.x release".
+#
+# Pin a full version (e.g. "26.10.0") for a fully reproducible install.
+# Re-check the current releases with `mise ls-remote <tool>` before pinning.
 [tools]
-python = "3.12"
+python = "3.14"
+node = "26"
+npm = "11"
 aws-cli = "2"

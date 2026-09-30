@@ -52,7 +52,7 @@ make check                       # confirms your OS + every tool below is actual
 uv sync                          # installs aws-cdk-lib, constructs, boto3, and dev tools
 docker compose up -d floci       # local AWS emulator
 uv run ruff check .              # lint
-uv run mypy shared modules app.py  # type-check
+make typecheck                   # type-check (mypy) - see the Makefile for why it's not a single mypy call
 uv run cdk synth <StackId>       # validate a specific module synthesizes
 uv run cdk deploy <StackId> --require-approval never  # deploy it to floci
 uv run cdk destroy <StackId>     # clean up

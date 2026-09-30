@@ -401,9 +401,9 @@ As ferramentas exatas sobre as quais este repositório roda, do empacotamento Py
 | `constructs`, `boto3` | Biblioteca base de constructs do CDK; SDK da AWS para Python (usado por alguns scripts de módulo) |
 | [floci](https://floci.io) (Docker) | Emulador de AWS local e gratuito — todo módulo é implantado aqui primeiro |
 | Docker + Docker Compose v2 | Executa o floci e seus consoles opcionais (`docker-compose.yml`) |
-| [mise](https://mise.jdx.dev) (opcional) | Fixa/instala a versão exata do Python e a AWS CLI v2 (`mise.toml` / `.python-version`) |
+| [mise](https://mise.jdx.dev) (opcional) | Fixa/instala as versões exatas do Python, Node.js 26, npm 11 e AWS CLI v2 (`mise.toml` / `.python-version`) |
 | `pytest`, `mypy`, `ruff` | Testes unitários (`aws_cdk.assertions`), checagem de tipos e lint |
-| Node.js + npm | Executa o AWS CDK Toolkit (CLI `cdk`) e, opcionalmente, as CLIs de Mermaid/Marp |
+| Node.js 26 + npm 11 (via mise) | Executa o AWS CDK Toolkit (CLI `cdk`) e, opcionalmente, as CLIs de Mermaid/Marp |
 
 ---
 
@@ -481,7 +481,7 @@ uv run cdk destroy VpcStack                                  # desfaz tudo
 ```bash
 uv run pytest                            # todos os testes unitários — sem Docker/floci/credenciais AWS
 uv run pytest tests/unit/test_03_vpc.py -v
-uv run mypy shared modules app.py         # checagem de tipos (from __future__ import annotations em todo arquivo)
+make typecheck                           # checagem de tipos com mypy (from __future__ import annotations em todo arquivo)
 uv run ruff check .                        # lint
 make check                                # SO + cada ferramenta obrigatória/recomendada/opcional
 ```
@@ -730,9 +730,9 @@ De um clone recém-feito até o seu primeiro `cdk deploy`, e um exemplo prático
 
 | Ferramenta | Para quê |
 |---|---|
-| Python 3.12 (via uv ou mise) | roda a aplicação CDK e os testes unitários |
+| Python 3.14 (via uv ou mise) | roda a aplicação CDK e os testes unitários |
 | uv | gerenciador de pacotes/venv Python |
-| Node.js + npm | roda o AWS CDK Toolkit (CLI `cdk`) |
+| Node.js 26 + npm 11 (via mise) | roda o AWS CDK Toolkit (CLI `cdk`) |
 | Docker + Docker Compose v2 | roda o floci e seus consoles opcionais |
 | AWS CLI v2 (via mise), `make`, `git` | inspeção manual do floci; orquestração |
 

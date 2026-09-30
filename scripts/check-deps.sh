@@ -141,10 +141,10 @@ check_python() {
   have="$(first_version "$(python3 --version 2>&1)")"
   if [ -z "$have" ]; then
     warn "python3 found, but its version could not be parsed."
-  elif ver_ge "$have" "3.10"; then
-    ok "Python $have (>= 3.10 required)"
+  elif ver_ge "$have" "3.14"; then
+    ok "Python $have (3.14 pinned in .python-version/mise.toml)"
   else
-    fail "Python $have found, but aws-cdk-lib requires >= 3.10. $REQUIREMENTS_HINT"
+    warn "Python $have found, but this repository pins 3.14 - run 'mise install', or let 'uv sync' download 3.14 itself (see REQUIREMENTS.md sections 3.3 and 4)."
   fi
 }
 
@@ -159,7 +159,7 @@ check_uv() {
 
 check_mise() {
   if ! command -v mise >/dev/null 2>&1; then
-    warn "mise not found (recommended, not required - installs the pinned Python and AWS CLI; uv can manage Python on its own). See REQUIREMENTS.md section 3.3."
+    warn "mise not found (recommended, not required - installs the pinned Python, Node.js, npm, and AWS CLI; without it, install them yourself). See REQUIREMENTS.md section 3.3."
     return
   fi
   ok "mise found"
@@ -167,16 +167,31 @@ check_mise() {
 
 check_node() {
   if ! command -v node >/dev/null 2>&1; then
-    fail "Node.js not found (needed for the AWS CDK Toolkit). $REQUIREMENTS_HINT"
+    fail "Node.js not found (needed for the AWS CDK Toolkit) - run 'mise install' from this repository's root (see REQUIREMENTS.md section 3.3)."
     return
   fi
   have="$(first_version "$(node --version 2>&1)")"
   if [ -z "$have" ]; then
     warn "Node.js found, but its version could not be parsed."
-  elif ver_ge "$have" "20.0"; then
-    ok "Node.js $have (>= 20 LTS required)"
+  elif ver_ge "$have" "26.0"; then
+    ok "Node.js $have (26 pinned in mise.toml)"
   else
-    warn "Node.js $have found, but >= 20 LTS is recommended. $REQUIREMENTS_HINT"
+    warn "Node.js $have found, but this repository pins Node.js 26 - run 'mise install' (see REQUIREMENTS.md section 3.3)."
+  fi
+}
+
+check_npm() {
+  if ! command -v npm >/dev/null 2>&1; then
+    fail "npm not found (needed to install the AWS CDK Toolkit) - run 'mise install' from this repository's root (see REQUIREMENTS.md section 3.3)."
+    return
+  fi
+  have="$(first_version "$(npm --version 2>&1)")"
+  if [ -z "$have" ]; then
+    warn "npm found, but its version could not be parsed."
+  elif ver_ge "$have" "11.0"; then
+    ok "npm $have (11 pinned in mise.toml)"
+  else
+    warn "npm $have found, but this repository pins npm 11 - run 'mise install' (see REQUIREMENTS.md section 3.3)."
   fi
 }
 
@@ -260,6 +275,7 @@ section "Required software (REQUIREMENTS.md section 3)"
 check_python
 check_uv
 check_node
+check_npm
 check_cdk
 check_docker
 check_docker_compose

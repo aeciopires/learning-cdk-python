@@ -401,9 +401,9 @@ That's the whole idea: `modules/03_vpc/stack.py` is Python code; `cdk synth` tur
 | `constructs`, `boto3` | CDK's construct base library; AWS SDK for Python (used by a few module scripts) |
 | [floci](https://floci.io) (Docker) | Free, local AWS emulator — every module deploys here first |
 | Docker + Docker Compose v2 | Runs floci and its optional consoles (`docker-compose.yml`) |
-| [mise](https://mise.jdx.dev) (optional) | Pins/installs the exact Python version and the AWS CLI v2 (`mise.toml` / `.python-version`) |
+| [mise](https://mise.jdx.dev) (optional) | Pins/installs the exact Python, Node.js 26, npm 11, and AWS CLI v2 versions (`mise.toml` / `.python-version`) |
 | `pytest`, `mypy`, `ruff` | Unit tests (`aws_cdk.assertions`), type checks, and linting |
-| Node.js + npm | Runs the AWS CDK Toolkit (`cdk` CLI) and, optionally, Mermaid/Marp CLIs |
+| Node.js 26 + npm 11 (via mise) | Runs the AWS CDK Toolkit (`cdk` CLI) and, optionally, Mermaid/Marp CLIs |
 
 ---
 
@@ -481,7 +481,7 @@ uv run cdk destroy VpcStack                                # tears them back dow
 ```bash
 uv run pytest                            # every unit test — no Docker/floci/AWS credentials needed
 uv run pytest tests/unit/test_03_vpc.py -v
-uv run mypy shared modules app.py         # type checks (from __future__ import annotations everywhere)
+make typecheck                           # type checks with mypy (from __future__ import annotations everywhere)
 uv run ruff check .                        # linting
 make check                                # OS + every required/recommended/optional tool
 ```
@@ -729,9 +729,9 @@ From a fresh clone to your first `cdk deploy`, and a worked example.
 
 | Tool | What for |
 |---|---|
-| Python 3.12 (via uv or mise) | runs the CDK app and the unit tests |
+| Python 3.14 (via uv or mise) | runs the CDK app and the unit tests |
 | uv | Python package/venv manager |
-| Node.js + npm | runs the AWS CDK Toolkit (`cdk` CLI) |
+| Node.js 26 + npm 11 (via mise) | runs the AWS CDK Toolkit (`cdk` CLI) |
 | Docker + Docker Compose v2 | runs floci and its optional consoles |
 | AWS CLI v2 (via mise), `make`, `git` | manual inspection of floci; orchestration |
 

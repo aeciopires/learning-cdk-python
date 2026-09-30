@@ -3,9 +3,11 @@
 - [Changelog](#changelog)
   - [\[Unreleased\]](#unreleased)
     - [Changed](#changed)
-  - [\[0.1.0 \] - 2026-10-29](#010----2026-10-29)
     - [Added](#added)
     - [Fixed](#fixed)
+  - [\[0.1.0 \] - 2026-10-29](#010----2026-10-29)
+    - [Added](#added-1)
+    - [Fixed](#fixed-1)
 
 <!-- TOC -->
 
@@ -23,8 +25,38 @@ written in English by convention.
   `aws-cli = "2"` next to `python`, so `mise install` sets up both.
   `REQUIREMENTS.md` sections 3.1-3.3 drop the manual `.zip`
   installer/`brew install awscli` steps (kept as a no-mise fallback in
-  section 3.3, now titled "Managing Python and the AWS CLI with mise"), and
+  section 3.3), and
   `make check` points to `mise install` when `aws` is missing.
+- Node.js and npm are now pinned in `mise.toml` (`node = "26"`, `npm =
+  "11"`, npm via the `aqua:npm/cli` backend) and installed by `mise
+  install`, replacing the NodeSource/Homebrew `node` install steps in
+  `REQUIREMENTS.md` sections 3.1/3.2 (NodeSource `setup_26.x` kept as a
+  no-mise fallback). `REQUIREMENTS.md` section 3.3 is renamed "Managing
+  tool versions with mise" and documents the pins, upgrades, and conflicts
+  with other Node.js version managers (nvm, fnm, Volta). `make check` now
+  expects Node.js >= 26 (was >= 20) and checks npm >= 11.
+- Python 3.14 (was 3.12): `.python-version`, `mise.toml`, `pyproject.toml`
+  (`requires-python = ">=3.14"`, ruff `target-version = "py314"`),
+  `uv.lock`, `REQUIREMENTS.md`, and both slide decks. `aws-cdk-lib`
+  2.271.0 lists Python 3.14 as supported on PyPI. On 3.14, every unit test
+  (root and `examples/enterprise_stack/`) passes, every module stack and
+  the enterprise example (`dev`/`staging`) synthesize, and a floci
+  deploy/destroy round-trip works. `make check` now expects Python 3.14.
+
+### Added
+
+- `make typecheck`: runs `mypy` over `shared/`, `app.py`,
+  `examples/enterprise_stack/`, and each `modules/NN_service/stack.py` on
+  its own.
+
+### Fixed
+
+- The documented type-check command (`uv run mypy shared modules app.py`,
+  in `CONTRIBUTING.md` and both slide decks) never ran: mypy rejects
+  `modules/01_iam/` and the other digit-prefixed directories as invalid
+  package names. Replaced by `make typecheck`.
+- `shared/tagging.py`: a `mypy` error (`cell_id` passed as `str | None` to
+  `Tags.add`) the broken command above had been hiding.
 
 ## [0.1.0 ] - 2026-10-29
 

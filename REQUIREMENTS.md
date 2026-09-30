@@ -7,7 +7,7 @@
   - [3. Required software](#3-required-software)
     - [3.1 - Install on Ubuntu (amd64)](#31---install-on-ubuntu-amd64)
     - [3.2 - Install on macOS (arm64 and amd64)](#32---install-on-macos-arm64-and-amd64)
-    - [3.3 - Managing Python and the AWS CLI with mise](#33---managing-python-and-the-aws-cli-with-mise)
+    - [3.3 - Managing tool versions with mise](#33---managing-tool-versions-with-mise)
     - [3.4 - Running and reading `make check`](#34---running-and-reading-make-check)
   - [4. Project setup (uv)](#4-project-setup-uv)
   - [5. Running floci (the local AWS emulator)](#5-running-floci-the-local-aws-emulator)
@@ -169,14 +169,15 @@ go, and tells you exactly what to install.
 
 | Software | Recommended version | Required? | What for |
 |---|---|---|---|
-| Python | 3.10+ | yes | `aws-cdk-lib` 2.271.0 requires Python >= 3.10 (see [PyPI](https://pypi.org/project/aws-cdk-lib/)) |
+| Python | 3.14 | yes | pinned in `.python-version`/`mise.toml` and required by `pyproject.toml` (`requires-python = ">=3.14"`); `aws-cdk-lib` 2.271.0 itself supports Python 3.10-3.14 (see [PyPI](https://pypi.org/project/aws-cdk-lib/)) - `uv sync` downloads 3.14 automatically if you don't have it |
 | [uv](https://docs.astral.sh/uv/) | latest | yes | Python package/venv manager used by every module - see [section 4](#4-project-setup-uv) |
-| [mise](https://mise.jdx.dev) | latest | recommended | installs the exact Python and AWS CLI versions this repository pins (`mise.toml`, `.python-version`) - see [section 3.3](#33---managing-python-and-the-aws-cli-with-mise) |
-| Node.js | 20 LTS+ | yes | the AWS CDK Toolkit (`aws-cdk`, the `cdk` CLI) is distributed as an npm package |
+| [mise](https://mise.jdx.dev) | latest | recommended | installs the exact Python, Node.js, npm, and AWS CLI versions this repository pins (`mise.toml`, `.python-version`) - see [section 3.3](#33---managing-tool-versions-with-mise) |
+| Node.js | 26 | yes | the AWS CDK Toolkit (`aws-cdk`, the `cdk` CLI) is distributed as an npm package - installed by `mise install` (pinned in `mise.toml`), see [section 3.3](#33---managing-tool-versions-with-mise) |
+| npm | 11 | yes | installs the AWS CDK Toolkit (`npm install -g aws-cdk`) and provides `npx` - installed by `mise install` (pinned in `mise.toml`) |
 | AWS CDK Toolkit (`cdk`) | v2, matching `aws-cdk-lib`'s major version | yes | `cdk synth` / `cdk deploy` / `cdk destroy` - install with `npm install -g aws-cdk` or run on demand with `npx aws-cdk@2` |
 | Docker Engine / Docker Desktop, or [Colima](https://github.com/abiosoft/colima) (macOS alternative - section 3.2) | 24+ | yes | runs floci (and, for some modules, floci's "real Docker" backends) |
 | Docker Compose v2 (`docker compose`) | 2.20+ | yes | brings up `docker-compose.yml` |
-| AWS CLI | v2 | recommended | used in every module's "Verify" section, pointed at floci or at a real account - installed by `mise install` (pinned in `mise.toml`), see [section 3.3](#33---managing-python-and-the-aws-cli-with-mise) |
+| AWS CLI | v2 | recommended | used in every module's "Verify" section, pointed at floci or at a real account - installed by `mise install` (pinned in `mise.toml`), see [section 3.3](#33---managing-tool-versions-with-mise) |
 | git | 2.x | yes | - |
 | floci CLI | latest | optional | an alternative to `docker compose` for running floci - see [section 5.2](#52---option-b-floci-cli) |
 | [Marp CLI](https://github.com/marp-team/marp-cli) (`@marp-team/marp-cli`) | latest | optional | render/export `docs/slides/SLIDES-*.md` to HTML/PDF/PPTX - see [section 11](#11-building-rendering-and-exporting-the-slide-decks-marp) |
@@ -206,14 +207,10 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 curl https://mise.run | sh
 echo 'eval "$(~/.local/bin/mise activate bash)"' >> ~/.bashrc   # Bash; Zsh/Fish/others: section 3.3
 # open a new terminal, then, from this repository's root - installs
-# Python and the AWS CLI v2 pinned in mise.toml:
+# Python, Node.js 26, npm 11, and the AWS CLI v2 pinned in mise.toml:
 mise trust && mise install
 
-# Node.js (LTS) - see https://nodejs.org/en/download for other options
-curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
-sudo apt-get install -y nodejs
-
-# AWS CDK Toolkit
+# AWS CDK Toolkit (uses the mise-managed Node.js/npm installed above)
 npm install -g aws-cdk
 
 # floci CLI (optional - see section 5.2)
@@ -227,16 +224,20 @@ curl -fsSL https://floci.io/install.sh | sh
 #   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
 brew install --cask docker      # Docker Desktop - open the app at least once
-brew install uv mise node git
+brew install uv mise git
 echo 'eval "$(mise activate zsh)"' >> ~/.zshrc   # Zsh (macOS default); other shells: section 3.3
-npm install -g aws-cdk
 brew install floci-io/floci/floci-cli   # optional - see section 5.2
 ```
 
-Open a new terminal (so the `mise activate` line above takes effect), then, from
-this repository's root: `mise trust && mise install` (installs Python and
-the AWS CLI v2 pinned in `mise.toml`) - see
-[section 3.3](#33---managing-python-and-the-aws-cli-with-mise) for what this does.
+Open a new terminal (so the `mise activate` line above takes effect), then,
+from this repository's root:
+
+```bash
+mise trust && mise install   # Python, Node.js 26, npm 11, and the AWS CLI v2 pinned in mise.toml
+npm install -g aws-cdk       # AWS CDK Toolkit, using the mise-managed Node.js/npm
+```
+
+See [section 3.3](#33---managing-tool-versions-with-mise) for what this does.
 
 **Docker Desktop alternative: [Colima](https://github.com/abiosoft/colima).**
 Anywhere this document or a module's README says `docker compose ...` or
@@ -271,11 +272,11 @@ Everything else in this document (`docker compose up -d floci`, the
 `/var/run/docker.sock` mount in `docker-compose.yml`, etc.) is unaffected by
 which of the two you use - both present the same Docker API.
 
-### 3.3 - Managing Python and the AWS CLI with mise
+### 3.3 - Managing tool versions with mise
 
 **New to version managers? Here's the problem one solves.** Your computer
-probably already has a Python installed - but is it Python 3.10 or later
-(what `aws-cdk-lib` requires - see the table above)? Is it the *same*
+probably already has a Python installed - but is it Python 3.14 (what this
+repository requires - see the table above)? Is it the *same*
 version a teammate has, or that this repository was tested with? Installing
 a second, third, or tenth Python version by hand, and remembering to
 `export PATH=...` to the right one in the right project, gets unmanageable
@@ -287,17 +288,27 @@ based on which directory you're in.
 [mise](https://mise.jdx.dev) is one such version manager (in the same
 family as tools like `pyenv`, `nvm`, or `rbenv` - the difference is that
 mise handles many languages/tools through one CLI and one config file
-format, instead of one tool per language). This repository declares two
+format, instead of one tool per language). This repository declares four
 tools in [`mise.toml`](mise.toml):
 
 ```toml
 [tools]
-python = "3.12"
+python = "3.14"
+node = "26"
+npm = "11"
 aws-cli = "2"
 ```
 
 - `python` - the same version pinned in [`.python-version`](.python-version),
   which `uv` also reads - see [section 4](#4-project-setup-uv).
+- `node` - Node.js 26 (`"26"` means "the latest 26.x release"), which runs
+  the AWS CDK Toolkit (`cdk`) and the optional Marp/Mermaid CLIs via `npx`.
+  Global packages (`npm install -g aws-cdk`) are installed inside mise's
+  Node.js 26 directory, so they're on your `PATH` only while that version is
+  active - reinstall them after switching Node.js versions.
+- `npm` - npm 11, pinned separately (mise registry backend `aqua:npm/cli`)
+  instead of relying on whichever npm Node.js happens to bundle; it takes
+  precedence over the bundled one on your `PATH`.
 - `aws-cli` - the AWS CLI v2 (the `aws` command every module's "Verify"
   section uses). mise downloads it from the official
   [aws/aws-cli](https://github.com/aws/aws-cli) releases (its registry
@@ -346,31 +357,50 @@ mise trust      # you're telling mise "I trust the mise.toml in this specific
                  # folder to run its declared tools" - a one-time confirmation
                  # per project, a safety measure since a malicious mise.toml
                  # could otherwise run arbitrary install scripts
-mise install    # downloads and installs exactly Python 3.12 and the AWS
-                 # CLI v2 (if you don't already have those versions via
-                 # mise) into ~/.local/share/mise/ - it never touches or
-                 # overwrites any Python or `aws` your system already has
-                 # installed elsewhere
+mise install    # downloads and installs exactly Python 3.14, Node.js 26,
+                 # npm 11, and the AWS CLI v2 (if you don't already have
+                 # those versions via mise) into ~/.local/share/mise/ - it
+                 # never touches or overwrites any Python, Node.js, npm,
+                 # or `aws` your system already has installed elsewhere
 ```
 
 After that, simply being in this repository's directory (with mise's shell
-activation from section 3.1/3.2 in place) puts those exact Python and
-AWS CLI versions first on your `PATH` - `cd` out to any other project and it's gone again,
+activation from section 3.1/3.2 in place) puts those exact Python,
+Node.js, npm, and AWS CLI versions first on your `PATH` - `cd` out to any
+other project and it's gone again,
 replaced by whatever *that* project needs (or your system default, if none
 is declared). Run `mise ls` at any time to see every tool/version mise has
-installed, and `python --version` / `aws --version` inside this
-repository's folder to confirm you're on Python 3.12 and `aws-cli/2.x`.
+installed, and `python --version` / `node --version` / `npm --version` /
+`aws --version` inside this repository's folder to confirm you're on Python 3.14,
+Node.js `v26.x`, npm `11.x`, and `aws-cli/2.x`.
 
-To move to a newer AWS CLI later, `mise upgrade aws-cli` (with `aws-cli =
-"2"`, this picks up the newest 2.x release), or edit the version in
-`mise.toml` and run `mise install` again. Without shell activation,
-`mise exec -- aws --version` runs the same pinned binary.
+To move to a newer release within the same major version later, run
+`mise upgrade` (or `mise upgrade node npm aws-cli` for specific tools) - with
+`node = "26"`, `npm = "11"`, and `aws-cli = "2"`, this picks up the newest
+26.x/11.x/2.x release. To change a major version, edit it in `mise.toml`
+and run `mise install` again (then `npm install -g aws-cdk` again, for the
+reason explained under `node` above). For Python, also update
+`.python-version` to match and run `uv sync` to rebuild `.venv/` - see
+[section 4](#4-project-setup-uv).
+
+**Already using nvm, fnm, Volta, or a system Node.js?** Whichever directory
+comes first on your `PATH` wins. `mise activate` puts mise's tools first
+when it runs, so place the `mise activate` line **after** any other Node.js
+version manager's setup lines in your shell startup file. Then check with
+`command -v node` (should print a path under `~/.local/share/mise/`) and
+`npm prefix -g` (should print mise's Node.js 26 directory - if it prints
+another manager's directory, `npm install -g aws-cdk` puts `cdk` there
+instead).
+
+Without shell activation (in scripts or CI, for example), `mise exec --
+<command>` runs a command with the same pinned tools, e.g. `mise exec -- aws
+--version`.
 
 **Is mise required?** No - it's marked "recommended" in the table above,
 not "yes". `uv` (section 4) is capable of downloading and managing its own
 Python versions automatically, so `uv sync` works even without mise
-installed at all, as long as *some* Python 3.10+ is reachable (or as a
-fallback, uv fetches one itself). mise is offered for two reasons: (1) if
+installed at all - if Python 3.14 isn't already on your machine, uv
+downloads it itself. mise is offered for two reasons: (1) if
 you're used to managing every language's version the same way across
 several repositories (this GitHub account's other repositories already use
 `mise.toml` the same way, for other languages), it keeps that one habit
@@ -378,17 +408,24 @@ here too; (2) pinning the interpreter itself, not just the packages
 installed into it, is one less variable to debug if something behaves
 differently on your machine than someone else's.
 
-**Skipping mise? Install the AWS CLI yourself.** Without mise, nothing else
-in this repository installs the `aws` command, so use the
-[official AWS CLI v2 installer](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
-instead - on Ubuntu (amd64):
+**Skipping mise? Install Node.js and the AWS CLI yourself.** Without mise,
+nothing else in this repository installs `node`, `npm`, or `aws`. On Ubuntu
+(amd64):
 
 ```bash
+# Node.js 26 (bundles npm 11) - see https://nodejs.org/en/download for other options
+curl -fsSL https://deb.nodesource.com/setup_26.x | sudo -E bash -
+sudo apt-get install -y nodejs
+npm install -g npm@11     # only if `npm --version` isn't 11.x already
+
+# AWS CLI v2 - https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
 curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
 unzip awscliv2.zip && sudo ./aws/install
 ```
 
-or, on macOS, `brew install awscli`.
+On macOS, `brew install awscli` for the AWS CLI, and Node.js 26 from
+[nodejs.org](https://nodejs.org/en/download) (Homebrew's `node` formula
+follows the newest Node.js release, which may not be 26).
 
 ### 3.4 - Running and reading `make check`
 
@@ -397,8 +434,10 @@ the `make` command (pre-installed on Ubuntu and macOS, or `sudo apt-get
 install -y build-essential` / Xcode Command Line Tools if it's ever
 missing). It defines named **targets** - `make <target>` runs the shell
 commands listed under that target in the `Makefile`. This repository
-defines exactly two: `help` (the default - just running `make` with no
-target shows this) and `check`.
+defines three: `help` (the default - just running `make` with no target
+shows this), `check` (covered here), and `typecheck` (runs `mypy` over
+`shared/`, `app.py`, every module's `stack.py`, and `examples/` - see
+[`CONTRIBUTING.md`](CONTRIBUTING.md)).
 
 **Run it:**
 
@@ -415,7 +454,7 @@ your operating system/architecture and checks every row of the
   [ OK ] Ubuntu 24.04 (x86_64) - supported
 
 == Required software (REQUIREMENTS.md section 3) ==
-  [ OK ] Python 3.12.4 (>= 3.10 required)
+  [ OK ] Python 3.14.7 (3.14 pinned in .python-version/mise.toml)
   [FAIL] uv not found. See REQUIREMENTS.md, section 3 (Required software), ...
   ...
 ```
@@ -455,7 +494,7 @@ and locked in `uv.lock` (created by the command below). See
 and [Working with the AWS CDK in Python](https://docs.aws.amazon.com/cdk/v2/guide/work-with-cdk-python.html)
 for the concepts this setup is based on. `uv sync` reads
 [`.python-version`](.python-version) to pick the interpreter it builds
-`.venv/` with - if you set up mise ([section 3.3](#33---managing-python-and-the-aws-cli-with-mise)),
+`.venv/` with - if you set up mise ([section 3.3](#33---managing-tool-versions-with-mise)),
 that's the same Python version mise installs, already on your `PATH`; if
 you skipped mise, uv downloads a matching Python version on its own, so
 either way works.
@@ -782,7 +821,7 @@ unaffected - this only matters for **live preview**:
 - [Marp CLI](https://github.com/marp-team/marp-cli) · [Marp for VS Code](https://marketplace.visualstudio.com/items?itemName=marp-team.marp-vscode) · [marp.app](https://marp.app) · [Marpit - `html` and other Markdown directives](https://marpit.marp.app/directives)
 - [Puppeteer - Troubleshooting (headless Chromium system dependencies on Linux)](https://pptr.dev/troubleshooting)
 - [uv - Getting started](https://docs.astral.sh/uv/getting-started/installation/)
-- [mise - Getting started](https://mise.jdx.dev/getting-started.html) · [mise - Installing mise](https://mise.jdx.dev/installing-mise.html) · [mise - Registry](https://mise.jdx.dev/registry.html) (the `aws-cli` tool) · [aws/aws-cli releases](https://github.com/aws/aws-cli)
+- [mise - Getting started](https://mise.jdx.dev/getting-started.html) · [mise - Installing mise](https://mise.jdx.dev/installing-mise.html) · [mise - Registry](https://mise.jdx.dev/registry.html) (the `aws-cli` tool) · [aws/aws-cli releases](https://github.com/aws/aws-cli) · [Node.js releases](https://nodejs.org/en/about/previous-releases) · [npm/cli](https://github.com/npm/cli)
 - [AWS CDK v2 Developer Guide - Working with the AWS CDK in Python](https://docs.aws.amazon.com/cdk/v2/guide/work-with-cdk-python.html)
 - [AWS CDK v2 Developer Guide - Environments](https://docs.aws.amazon.com/cdk/v2/guide/environments.html)
 - [AWS CDK v2 Developer Guide (home)](https://docs.aws.amazon.com/cdk/v2/guide/home.html)
