@@ -17,7 +17,7 @@ class EnterpriseCellStack(Stack):
     (product, environment, cell_id, account, region) combination.
     Instantiate it again with a different `config`/`enabled_keys`/`env`
     and you get an independent, identically-shaped cell - see
-    environments/prod.json for two cells built from the very same classes.
+    environments/prd.json for two cells built from the very same classes.
 
     This class knows nothing about IAM, VPCs, S3, or any other AWS
     service - only how to ask a `ResourceRegistry` for the enabled

@@ -4,14 +4,16 @@
 Deploys one EnterpriseCellStack per cell listed in
 environments/<ENTERPRISE_ENVIRONMENT>.json. Run from the repository root:
 
-    export ENTERPRISE_ENVIRONMENT=dev   # or staging, or prod
+    export ENTERPRISE_ENVIRONMENT=dev   # or stg, or prd
     uv run cdk synth --app "uv run python examples/enterprise_stack/app.py"
     uv run cdk list  --app "uv run python examples/enterprise_stack/app.py"
 
-Switching `dev` to `staging` to `prod` (or adding a cell to prod.json)
+Switching `dev` to `stg` to `prd` (or adding a cell to prd.json)
 changes which resources get built and how many cells get deployed without
-touching a single line of Python - see README.md, "Cells: replicating the
-same stack across environments, accounts, and regions".
+touching a single line of Python. The chosen name is also every cell's
+`environment` tag and resource-name segment (overriding `CDK_ENVIRONMENT`),
+so stg cells are always named `...-stg-...` - see README.md, "Cells:
+replicating the same stack across environments, accounts, and regions".
 
 This file is deliberately not registered in the repository's own
 app.py/cdk.json - see README.md, "Why this lives outside modules/" for why
@@ -28,7 +30,7 @@ import aws_cdk as cdk
 from examples.enterprise_stack.builders import build_default_registry
 from examples.enterprise_stack.core.environment_config import load_environment
 from examples.enterprise_stack.stack import EnterpriseCellStack
-from shared.config import load_app_config
+from shared.config import load_app_config, validate_environment
 
 
 def _stack_id(cell_id: str) -> str:
@@ -38,11 +40,13 @@ def _stack_id(cell_id: str) -> str:
 def main() -> None:
     app = cdk.App()
     base_config = load_app_config()
-    environment_name = os.getenv("ENTERPRISE_ENVIRONMENT", "dev")
+    environment_name = validate_environment(os.getenv("ENTERPRISE_ENVIRONMENT", "dev"))
     registry = build_default_registry()
 
     for cell in load_environment(environment_name):
-        cell_config = replace(base_config, cell_based=True, cell_id=cell.cell_id)
+        cell_config = replace(
+            base_config, environment=environment_name, cell_based=True, cell_id=cell.cell_id
+        )
         EnterpriseCellStack(
             app,
             _stack_id(cell.cell_id),

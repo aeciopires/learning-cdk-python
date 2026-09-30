@@ -209,8 +209,8 @@ than to keep the file clean:
   else" option, so touching this function is everyone's least favorite
   task, and every change to it risks breaking a resource type the change
   had nothing to do with.
-- Wanting a KMS-encrypted version of the S3 bucket for just the `prod`
-  environment means adding an `if config.environment == "prod":` branch
+- Wanting a KMS-encrypted version of the S3 bucket for just the `prd`
+  environment means adding an `if config.environment == "prd":` branch
   *inside* the S3-creation code, so the S3 logic now also has to know
   about environment names, deployment tiers, and eventually - as more
   special cases accumulate - almost everything else in the system.
@@ -342,7 +342,7 @@ its own `cell_id`, its own physical resource names (every builder mixes
 `config.cell_id` into `resource_name(...)`, so two cells never collide),
 and optionally its own AWS account and/or region. `app.py` reads
 `environments/<name>.json` - see
-[`environments/prod.json`](environments/prod.json) - and creates one
+[`environments/prd.json`](environments/prd.json) - and creates one
 `EnterpriseCellStack` per entry in its `"cells"` array. That file currently
 lists two cells, `cell-01` in `us-east-1` and `cell-02` in `us-west-2`,
 both built from the exact same Python code, with the exact same 14
@@ -353,14 +353,19 @@ cells is 4 lines of JSON (`cell_id`, `account`, `region`) - each cell gets
 its own ECR repository, its own copy of the application image, and its
 own independently-scaling ECS service.
 
-Switching between `dev`, `staging`, and `prod` (see
+Switching between `dev`, `stg`, and `prd` (see
 [section 9](#9-running-it)) reads a different JSON file - again, no Python
 changes - and each file lists a different `enabled_resources` set per
 cell, so `dev` can stay cheap and minimal (6 resources, one cell) while
-`staging` runs the full container/load-balancing chain
+`stg` runs the full container/load-balancing chain
 (`ecr`/`ecs`/`alb`/`nlb`, see [section 8.2](#82---scaling-1-to-3-tasks-driven-by-cpu))
-with no live AWS account needed, and `prod` runs the complete 14-resource
-catalog, including `ec2`, across two cells.
+with no live AWS account needed, and `prd` runs the complete 14-resource
+catalog, including `ec2`, across two cells. The name you pick
+(`ENTERPRISE_ENVIRONMENT`, one of the short names `dev`/`stg`/`prd` - see
+[`../../REQUIREMENTS.md`, section 7](../../REQUIREMENTS.md#7-tagging-policy))
+is also every cell's `environment` tag and the environment segment of every
+resource name, overriding `CDK_ENVIRONMENT` - so a `stg` cell's resources are
+always `learning-cdk-python-stg-cell-01-...`, never `...-dev-...`.
 
 ## 7. Directory layout
 
@@ -380,8 +385,8 @@ examples/enterprise_stack/
 │   │   ec2_builder.py, acm_builder.py, ecs_builder.py, alb_builder.py, nlb_builder.py
 ├── environments/
 │   ├── dev.json                 # 1 cell, 6 resources, no explicit account/region
-│   ├── staging.json             # 1 cell, 13 resources (everything but ec2)
-│   └── prod.json                # 2 cells (different regions), all 14 resources each
+│   ├── stg.json                 # 1 cell, 13 resources (everything but ec2)
+│   └── prd.json                 # 2 cells (different regions), all 14 resources each
 └── tests/
     ├── test_registry.py                    # precedence/validation logic - pure Python, no CDK
     ├── test_stack_synth.py                 # aws_cdk.assertions-based synth tests
@@ -416,7 +421,7 @@ their own (see [section 2.5](#25---d-dependency-inversion-principle)),
 (c) `alb`/`nlb`'s load-balancer/target-group *physical* names use a
 shorter naming scheme than the tag - see the comment in
 `builders/alb_builder.py` for why (a real, AWS-enforced 32-character
-limit this example's own `prod.json` hit and fixed during development),
+limit this example's own `prd.json` hit and fixed during development),
 and (d) `ecs` runs a real application image from `ecr` instead of the
 public `nginx:alpine` image `modules/15_ecs` uses - see
 [section 8.1](#81---the-ecr-resource-copying-an-image-in).
@@ -450,7 +455,7 @@ docker push <account-id>.dkr.ecr.<region>.amazonaws.com/<repository-name>:latest
 
 `<repository-name>` is printed by `cdk deploy`'s stack outputs, or found
 with `aws ecr describe-repositories` - it follows this cell's usual naming
-convention, e.g. `learning-cdk-python-staging-cell-01-ecr-mytoolkit`. Until
+convention, e.g. `learning-cdk-python-stg-cell-01-ecr-mytoolkit`. Until
 an image is actually pushed, `cdk synth`/`cdk deploy` for `ecs` still
 succeed (CloudFormation does not validate that an ECR repository is
 non-empty when creating a task definition that references it), but any
@@ -497,7 +502,7 @@ autoscaling-specific code is needed on the load-balancer side at all.
 
 ```bash
 # from the repository root
-export ENTERPRISE_ENVIRONMENT=dev              # or staging, or prod
+export ENTERPRISE_ENVIRONMENT=dev              # or stg, or prd (short names only)
 
 uv run cdk list  --app "uv run python examples/enterprise_stack/app.py"
 uv run cdk synth --app "uv run python examples/enterprise_stack/app.py"
@@ -509,12 +514,12 @@ uv run cdk deploy --all --app "uv run python examples/enterprise_stack/app.py" -
 uv run cdk destroy --all --app "uv run python examples/enterprise_stack/app.py"
 ```
 
-`dev` and `staging` synthesize cleanly with no AWS credentials at all
+`dev` and `stg` synthesize cleanly with no AWS credentials at all
 (environment-agnostic, exactly like every `modules/NN_service` stack -
 see [`../../REQUIREMENTS.md`, section 9](../../REQUIREMENTS.md#9-flexible-account-and-region)) -
-`staging` in particular exercises the full `ecr` → `ecs` (autoscaling) →
+`stg` in particular exercises the full `ecr` → `ecs` (autoscaling) →
 `alb`/`nlb` chain with no live AWS account needed at all, since none of
-those four resources require a synth-time account lookup. `prod.json`
+those four resources require a synth-time account lookup. `prd.json`
 specifies explicit (placeholder) AWS account IDs, which makes `ec2` fail
 `cdk synth` without real credentials for that account (its AMI lookup
 does need one) - see [section 12](#12-known-limitations-and-honest-scope).
@@ -578,15 +583,15 @@ groups when both are enabled (or just one, when only one is).
   [`../../docs/LEARNING-PATH.md`](../../docs/LEARNING-PATH.md) - that
   page's own closing "Beyond the 44 modules" section links here as an
   optional next step, not as a module.
-- **`prod.json`'s explicit accounts are placeholders** (`111111111111`),
+- **`prd.json`'s explicit accounts are placeholders** (`111111111111`),
   not real AWS accounts - substitute your own before ever attempting a
   real deploy. With that placeholder account and no matching AWS
-  credentials, `cdk synth` for `prod` fails specifically on `ec2`
+  credentials, `cdk synth` for `prd` fails specifically on `ec2`
   (`ec2.MachineImage.latest_amazon_linux2023()` needs a live SSM Parameter
   Store lookup against the target account at synthesis time - see
   [AWS CDK - Environments](https://docs.aws.amazon.com/cdk/v2/guide/environments.html))
   - this is standard, documented CDK behavior for a concretely-specified
-  environment, not a bug in this example. `dev`/`staging` never enable
+  environment, not a bug in this example. `dev`/`stg` never enable
   `ec2`, so they synthesize with no credentials at all.
 - **The `iam` builder's S3 policy is ARN-by-convention, not a live
   reference** (same as `modules/01_iam/stack.py`) - it works whether or

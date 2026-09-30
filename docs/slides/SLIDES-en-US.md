@@ -342,7 +342,7 @@ Full table with stack ids: [`docs/LEARNING-PATH.md`](../LEARNING-PATH.md)
 
 <div class="cards">
   <div class="card"><h4><code>Name</code></h4><p>e.g. <code>learning-cdk-python-dev-orders-queue</code> — AWS's own console-display tag, applied per resource.</p></div>
-  <div class="card"><h4><code>environment</code></h4><p>e.g. <code>dev</code>, <code>staging</code>, <code>prod</code></p></div>
+  <div class="card"><h4><code>environment</code></h4><p>e.g. <code>dev</code>, <code>stg</code>, <code>prd</code></p></div>
   <div class="card"><h4><code>product</code></h4><p>e.g. <code>learning-cdk-python</code></p></div>
   <div class="card"><h4><code>team-owner</code></h4><p>e.g. <code>platform-engineering</code></p></div>
   <div class="card"><h4><code>pci</code></h4><p><code>true</code>/<code>false</code> — PCI DSS scope</p></div>
@@ -913,8 +913,8 @@ Full explanation, plus a no-code "without SOLID" comparison: [`examples/enterpri
 <div class="flow">
   <div class="flow-row">
     <div class="flow-box dark"><strong>environments/dev.json</strong><span>1 cell · 6 resources · no explicit account</span></div>
-    <div class="flow-box dark"><strong>environments/staging.json</strong><span>1 cell · 13 resources (full app, no EC2)</span></div>
-    <div class="flow-box accent"><strong>environments/prod.json</strong><span>2 cells · all 14 resources each</span></div>
+    <div class="flow-box dark"><strong>environments/stg.json</strong><span>1 cell · 13 resources (full app, no EC2)</span></div>
+    <div class="flow-box accent"><strong>environments/prd.json</strong><span>2 cells · all 14 resources each</span></div>
   </div>
   <div class="flow-arrow down">↓</div>
   <div class="flow-row">
@@ -923,7 +923,7 @@ Full explanation, plus a no-code "without SOLID" comparison: [`examples/enterpri
   </div>
 </div>
 
-Turning a resource on/off is listing its key in JSON; ordering (e.g. VPC before EC2) is a topological sort over each builder's `depends_on` — enabling a resource without its dependency raises a clear error, it never silently auto-enables anything. Cells reuse this repo's own `cell_based`/`cell_id` tags (`shared/tagging.py`) — the only difference between the two prod cells is 4 lines of JSON.
+Turning a resource on/off is listing its key in JSON; ordering (e.g. VPC before EC2) is a topological sort over each builder's `depends_on` — enabling a resource without its dependency raises a clear error, it never silently auto-enables anything. Cells reuse this repo's own `cell_based`/`cell_id` tags (`shared/tagging.py`) — the only difference between the two prd cells is 4 lines of JSON.
 
 ---
 

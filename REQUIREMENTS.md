@@ -656,7 +656,7 @@ exact CDK calls):
 | Tag key | Value | Notes |
 |---|---|---|
 | `Name` | e.g. `learning-cdk-python-dev-orders-queue` | AWS's own default tag for displaying a resource's name in the console - the only tag key in this repository kept capitalized, and the only one applied per-resource rather than once per stack |
-| `environment` | e.g. `dev`, `staging`, `prod` | |
+| `environment` | `dev`, `stg`, or `prd` | short names only - `dev` (development), `stg` (staging), `prd` (production); any other value (including `staging`/`prod`) is rejected by [`shared/config.py`](shared/config.py) with a hint. The same short name is the environment segment of every resource name - see [section 8](#8-naming-policy) |
 | `product` | e.g. `learning-cdk-python` | the product/system this resource belongs to |
 | `team-owner` | e.g. `platform-engineering` | the team responsible for the resource |
 | `pci` | `true` or `false` | whether the resource is in scope for PCI DSS |
@@ -672,7 +672,11 @@ whole app, via the `CDK_*` environment variables in
 
 Physical resource names (bucket names, queue names, function names, ...) are
 built by [`shared/naming.py`](shared/naming.py) and use `-` as the
-separator, e.g. `learning-cdk-python-dev-orders-queue`. `_` is used only
+separator, e.g. `learning-cdk-python-dev-orders-queue`. The environment
+segment (`dev` above) is always one of the three short names `dev`, `stg`,
+`prd` - the same value as the `environment` tag (see
+[section 7](#7-tagging-policy)) - which also keeps names short for resource
+types with tight length limits. `_` is used only
 where a specific AWS resource type's naming rules forbid hyphens - each
 module's README links to that service's naming-rules page when this
 applies.

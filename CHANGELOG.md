@@ -42,9 +42,19 @@ written in English by convention.
   (root and `examples/enterprise_stack/`) passes, every module stack and
   the enterprise example (`dev`/`staging`) synthesize, and a floci
   deploy/destroy round-trip works. `make check` now expects Python 3.14.
+- Environments use short names only: `dev`, `stg` (was `staging`), `prd`
+  (was `prod`) - for the `environment` tag and the environment segment of
+  every resource name. `shared/config.py` gains `ENVIRONMENTS` and
+  `validate_environment()`; `CDK_ENVIRONMENT` is now validated (a long name
+  like `staging` fails with a "did you mean `stg`?" hint). In
+  `examples/enterprise_stack/`, `environments/staging.json`/`prod.json` are
+  renamed `stg.json`/`prd.json`, and `ENTERPRISE_ENVIRONMENT` is validated
+  the same way.
 
 ### Added
 
+- `tests/unit/test_shared_config.py`: tests for the environment short-name
+  policy above.
 - `make typecheck`: runs `mypy` over `shared/`, `app.py`,
   `examples/enterprise_stack/`, and each `modules/NN_service/stack.py` on
   its own.
@@ -55,6 +65,11 @@ written in English by convention.
   in `CONTRIBUTING.md` and both slide decks) never ran: mypy rejects
   `modules/01_iam/` and the other digit-prefixed directories as invalid
   package names. Replaced by `make typecheck`.
+- `examples/enterprise_stack/app.py`: `ENTERPRISE_ENVIRONMENT` only chose
+  the JSON file - the `environment` tag and resource names still came from
+  `CDK_ENVIRONMENT` (default `dev`), so a staging cell was named
+  `...-dev-...` despite its README showing `...-staging-...`. The selected
+  environment now sets both.
 - `shared/tagging.py`: a `mypy` error (`cell_id` passed as `str | None` to
   `Tags.add`) the broken command above had been hiding.
 

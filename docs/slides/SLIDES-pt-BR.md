@@ -342,7 +342,7 @@ Tabela completa com os stack ids: [`docs/LEARNING-PATH.md`](../LEARNING-PATH.md)
 
 <div class="cards">
   <div class="card"><h4><code>Name</code></h4><p>ex.: <code>learning-cdk-python-dev-orders-queue</code> — a própria tag de exibição do console da AWS, aplicada por recurso.</p></div>
-  <div class="card"><h4><code>environment</code></h4><p>ex.: <code>dev</code>, <code>staging</code>, <code>prod</code></p></div>
+  <div class="card"><h4><code>environment</code></h4><p>ex.: <code>dev</code>, <code>stg</code>, <code>prd</code></p></div>
   <div class="card"><h4><code>product</code></h4><p>ex.: <code>learning-cdk-python</code></p></div>
   <div class="card"><h4><code>team-owner</code></h4><p>ex.: <code>platform-engineering</code></p></div>
   <div class="card"><h4><code>pci</code></h4><p><code>true</code>/<code>false</code> — escopo PCI DSS</p></div>
@@ -914,8 +914,8 @@ Explicação completa, mais uma comparação sem código do "sem SOLID": [`examp
 <div class="flow">
   <div class="flow-row">
     <div class="flow-box dark"><strong>environments/dev.json</strong><span>1 célula · 6 recursos · sem conta explícita</span></div>
-    <div class="flow-box dark"><strong>environments/staging.json</strong><span>1 célula · 13 recursos (app completa, sem EC2)</span></div>
-    <div class="flow-box accent"><strong>environments/prod.json</strong><span>2 células · todos os 14 recursos cada</span></div>
+    <div class="flow-box dark"><strong>environments/stg.json</strong><span>1 célula · 13 recursos (app completa, sem EC2)</span></div>
+    <div class="flow-box accent"><strong>environments/prd.json</strong><span>2 células · todos os 14 recursos cada</span></div>
   </div>
   <div class="flow-arrow down">↓</div>
   <div class="flow-row">
@@ -924,7 +924,7 @@ Explicação completa, mais uma comparação sem código do "sem SOLID": [`examp
   </div>
 </div>
 
-Ligar/desligar um recurso é listar sua chave no JSON; a ordem (ex.: VPC antes do EC2) é uma ordenação topológica sobre o `depends_on` de cada builder — habilitar um recurso sem sua dependência gera um erro claro, nunca habilita nada silenciosamente. As células reaproveitam as próprias tags `cell_based`/`cell_id` deste repositório (`shared/tagging.py`) — a única diferença entre as duas células de prod são 4 linhas de JSON.
+Ligar/desligar um recurso é listar sua chave no JSON; a ordem (ex.: VPC antes do EC2) é uma ordenação topológica sobre o `depends_on` de cada builder — habilitar um recurso sem sua dependência gera um erro claro, nunca habilita nada silenciosamente. As células reaproveitam as próprias tags `cell_based`/`cell_id` deste repositório (`shared/tagging.py`) — a única diferença entre as duas células de prd são 4 linhas de JSON.
 
 ---
 

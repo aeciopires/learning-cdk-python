@@ -8,7 +8,8 @@ Mandatory tags on every resource:
                       uses, by default, to display a resource's name in the
                       console - kept as "Name", capitalized, unlike every
                       other tag key in this repository).
-    - environment   : e.g. "dev", "staging", "prod".
+    - environment   : "dev", "stg", or "prd" (short names only - see
+                      shared/config.py, ENVIRONMENTS).
     - product       : the product/system this resource belongs to.
     - team-owner    : the team responsible for the resource.
     - pci           : "true" or "false" (string, not boolean - CloudFormation

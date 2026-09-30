@@ -1,5 +1,5 @@
 """Loads environments/<name>.json - the *only* file that changes between
-dev, staging, prod, or between adding a second "cell" - see ../README.md,
+dev, stg, prd, or between adding a second "cell" - see ../README.md,
 "Cells: replicating the same stack across environments, accounts, and
 regions".
 """
@@ -45,7 +45,7 @@ def load_environment(name: str) -> list[CellConfig]:
     """Read environments/<name>.json and return its list of cells.
 
     `name` is normally the `ENTERPRISE_ENVIRONMENT` environment variable
-    (see app.py) - switching `dev` to `staging` to `prod` changes nothing
+    (see app.py) - switching `dev` to `stg` to `prd` changes nothing
     in this package's Python code, only which JSON file gets read.
     """
     path = ENVIRONMENTS_DIR / f"{name}.json"

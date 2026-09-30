@@ -208,6 +208,13 @@ queue = sqs.Queue(self, "OrdersQueue", queue_name=queue_name)
 apply_name_tag(queue, queue_name)
 ```
 
+The environment is always one of three short names - `dev`, `stg`
+(staging), `prd` (production) - never `staging`/`prod`/`production`:
+`shared/config.py` (`ENVIRONMENTS`, `validate_environment()`) rejects
+anything else when reading `CDK_ENVIRONMENT`, and the enterprise example's
+`ENTERPRISE_ENVIRONMENT` and `environments/*.json` file names follow the
+same rule.
+
 Never hardcode a tag value, a product name, an environment name, or a team
 name in a module - every one of those comes from `config` (a
 `shared.config.AppConfig`, built from environment variables - see

@@ -15,6 +15,38 @@ import aws_cdk as cdk
 
 from shared.tagging import StandardTags
 
+# The only accepted values for the `environment` tag and the environment
+# segment of every resource name - short, fixed-length names keep physical
+# names (which often have tight length limits) short and consistent. See
+# REQUIREMENTS.md, "Tagging policy".
+ENVIRONMENTS: tuple[str, ...] = ("dev", "stg", "prd")
+
+# Long names people commonly type out of habit, mapped to the short name
+# to suggest instead - used only to build a helpful error message.
+_LONG_ENVIRONMENT_NAMES = {
+    "development": "dev",
+    "staging": "stg",
+    "stage": "stg",
+    "prod": "prd",
+    "production": "prd",
+}
+
+
+def validate_environment(name: str) -> str:
+    """Return `name` normalized (stripped, lower-cased) if it is in `ENVIRONMENTS`.
+
+    Raises `ValueError` otherwise, suggesting the short name when `name` is
+    a common long form (e.g. "staging" -> "stg", "prod" -> "prd").
+    """
+    normalized = name.strip().lower()
+    if normalized in ENVIRONMENTS:
+        return normalized
+    hint = _LONG_ENVIRONMENT_NAMES.get(normalized)
+    suggestion = f' - did you mean "{hint}"?' if hint else ""
+    raise ValueError(
+        f"Invalid environment {name!r}: must be one of {', '.join(ENVIRONMENTS)}{suggestion}"
+    )
+
 
 def get_environment() -> cdk.Environment | None:
     """Build a `cdk.Environment` from the standard CDK/AWS CLI env vars.
@@ -68,7 +100,7 @@ def load_app_config() -> AppConfig:
     cell_based = os.getenv("CDK_CELL_BASED", "false").strip().lower() == "true"
     return AppConfig(
         product=os.getenv("CDK_PRODUCT", "learning-cdk-python"),
-        environment=os.getenv("CDK_ENVIRONMENT", "dev"),
+        environment=validate_environment(os.getenv("CDK_ENVIRONMENT", "dev")),
         team_owner=os.getenv("CDK_TEAM_OWNER", "platform-engineering"),
         pci=os.getenv("CDK_PCI", "false").strip().lower() == "true",
         cell_based=cell_based,
