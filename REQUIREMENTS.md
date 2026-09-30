@@ -17,6 +17,7 @@
     - [5.4 - Optional: the standalone floci-ui project (built from source)](#54---optional-the-standalone-floci-ui-project-built-from-source)
     - [5.5 - Optional: floci-dash, a second console](#55---optional-floci-dash-a-second-console)
     - [5.6 - Optional: `make` shortcuts for floci and the CDK](#56---optional-make-shortcuts-for-floci-and-the-cdk)
+    - [5.7 - Bootstrapping the CDK (once per floci instance or AWS account/region)](#57---bootstrapping-the-cdk-once-per-floci-instance-or-aws-accountregion)
   - [6. Network ports used](#6-network-ports-used)
   - [7. Tagging policy](#7-tagging-policy)
   - [8. Naming policy](#8-naming-policy)
@@ -113,15 +114,27 @@ Now, step by step:
    uv run cdk --version
    uv run cdk list
    ```
-8. **Pick the first module and follow its own README**, starting with
+8. **Bootstrap the CDK in floci** - a one-time step that prepares floci to
+   receive CDK deployments (see
+   [section 5.7](#57---bootstrapping-the-cdk-once-per-floci-instance-or-aws-accountregion)
+   for what it does and why). Skip it and your first `cdk deploy` fails with
+   `SsmParameterNotFound: SSM parameter /cdk-bootstrap/hnb659fds/version not found`:
+   ```bash
+   uv run cdk bootstrap
+   ```
+   Run it again on every new computer, and after `make floci-destroy` or
+   deleting `./.floci/` - floci's state lives only on the machine that runs
+   it. Running it when it isn't needed is harmless.
+9. **Pick the first module and follow its own README**, starting with
    [`modules/01_iam/README.md`](modules/01_iam/README.md) - every module's
    README has its own copy-pasteable "Deploy with floci" and "Clean up"
    commands, so you never need to guess a stack id or a flag.
-9. **When you're done for the day**, stop floci so it isn't left running in
-   the background:
-   ```bash
-   docker compose down
-   ```
+10. **When you're done for the day**, stop floci so it isn't left running in
+    the background (its state, including the bootstrap from step 8, is
+    kept):
+    ```bash
+    docker compose down
+    ```
 
 If any command above fails, re-run `make check` first - it usually
 pinpoints exactly which tool or OS mismatch is the cause. Otherwise,
@@ -678,6 +691,70 @@ Details worth knowing:
   everything at once with `make floci-destroy`.
 - Run `make` with no target to list every target and these examples.
 
+### 5.7 - Bootstrapping the CDK (once per floci instance or AWS account/region)
+
+**What bootstrapping is.** Before the CDK can deploy anything to an
+environment (an AWS account + region - or, here, floci), that environment
+must be *bootstrapped*: `cdk bootstrap` deploys a CloudFormation stack
+called `CDKToolkit` with the resources every later `cdk deploy` relies on
+- an S3 bucket for templates and assets, an ECR repository for Docker
+images, IAM roles for deployments, and an SSM parameter recording the
+bootstrap version. The CDK never does this automatically, and each
+environment is bootstrapped independently - see
+[AWS CDK bootstrapping](https://docs.aws.amazon.com/cdk/v2/guide/bootstrapping.html).
+
+**Why a missing bootstrap shows up as `SsmParameterNotFound`.** Every
+template this repository synthesizes contains this parameter (open any
+`cdk.out/*.template.json` after a `cdk synth` to see it):
+
+```json
+"BootstrapVersion": {
+  "Type": "AWS::SSM::Parameter::Value<String>",
+  "Default": "/cdk-bootstrap/hnb659fds/version"
+}
+```
+
+plus a `CheckBootstrapVersion` rule that rejects versions older than the
+one the CDK needs. So the first thing a deploy does is read the SSM
+parameter `/cdk-bootstrap/hnb659fds/version` (`hnb659fds` is the CDK's
+default bootstrap "qualifier"). Only `cdk bootstrap` creates it - so in a
+never-bootstrapped environment, the deploy stops with:
+
+```
+IamStack: SSM parameter /cdk-bootstrap/hnb659fds/version not found in aws://000000000000/us-east-1.
+Has the environment been bootstrapped? Please run 'cdk bootstrap' ...
+‣ SsmParameterNotFound: ...
+```
+
+**Why it works on one computer and not on another.** floci is a separate
+AWS "environment" on every machine: its state - including the
+`CDKToolkit` stack and that SSM parameter - is stored in `./.floci/data`
+(`FLOCI_STORAGE_MODE: persistent` in [`docker-compose.yml`](docker-compose.yml)),
+which is local to that computer and not committed to git (see
+[`.gitignore`](.gitignore)). A fresh clone on a second computer starts
+with an empty floci, so it needs its own `cdk bootstrap`.
+
+**When to run it:**
+
+| Situation | Run `cdk bootstrap`? |
+|---|---|
+| First time on this computer (step 8 of [section 0](#0-zero-to-your-first-deploy-in-order)) | yes |
+| After `make floci-destroy`, or deleting `./.floci/` | yes - the state is gone |
+| After `docker compose down`/`up`, `make floci-stop`/`floci-start`, or a reboot | no - persistent mode keeps it |
+| After upgrading the CDK CLI, if a deploy asks for a newer bootstrap version | yes - it upgrades the stack in place |
+| Before your first deploy to each real AWS account + region | yes, once per account/region (`uv run cdk bootstrap --profile <your-aws-cli-profile>`) |
+
+Re-running it is always safe: if nothing changed it reports
+`bootstrapped (no changes)`. `make cdk-deploy` (section 5.6) runs it for
+you before every deploy.
+
+**Check whether an environment is bootstrapped:**
+
+```bash
+aws cloudformation describe-stacks --stack-name CDKToolkit --query "Stacks[0].StackStatus"
+aws ssm get-parameter --name /cdk-bootstrap/hnb659fds/version --query Parameter.Value
+```
+
 ## 6. Network ports used
 
 | Port | Service | Note |
@@ -868,6 +945,7 @@ unaffected - this only matters for **live preview**:
 - [mise - Getting started](https://mise.jdx.dev/getting-started.html) · [mise - Installing mise](https://mise.jdx.dev/installing-mise.html) · [mise - Registry](https://mise.jdx.dev/registry.html) (the `aws-cli` tool) · [aws/aws-cli releases](https://github.com/aws/aws-cli) · [Node.js releases](https://nodejs.org/en/about/previous-releases) · [npm/cli](https://github.com/npm/cli)
 - [AWS CDK v2 Developer Guide - Working with the AWS CDK in Python](https://docs.aws.amazon.com/cdk/v2/guide/work-with-cdk-python.html)
 - [AWS CDK v2 Developer Guide - Environments](https://docs.aws.amazon.com/cdk/v2/guide/environments.html)
+- [AWS CDK v2 Developer Guide - AWS CDK bootstrapping](https://docs.aws.amazon.com/cdk/v2/guide/bootstrapping.html) · [Troubleshooting common AWS CDK issues](https://docs.aws.amazon.com/cdk/v2/guide/troubleshooting.html)
 - [AWS CDK v2 Developer Guide (home)](https://docs.aws.amazon.com/cdk/v2/guide/home.html)
 - [AWS CDK API Reference (Python)](https://docs.aws.amazon.com/cdk/api/v2/python/)
 - [`aws-cdk-lib` on PyPI](https://pypi.org/project/aws-cdk-lib/) · [`constructs` on PyPI](https://pypi.org/project/constructs/)

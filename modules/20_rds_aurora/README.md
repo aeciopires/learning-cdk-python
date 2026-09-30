@@ -102,6 +102,7 @@ uv run pytest tests/unit/test_20_rds_aurora.py -v
 ```bash
 # From the repository root - see ../../REQUIREMENTS.md for eval $(floci env)
 eval $(floci env)
+uv run cdk bootstrap   # once per floci instance - safe to re-run; see REQUIREMENTS.md section 5.7
 uv run cdk synth RdsAuroraStack
 uv run cdk deploy RdsAuroraStack --require-approval never
 ```
@@ -115,6 +116,7 @@ deployed.
 
 ```bash
 unset AWS_ENDPOINT_URL   # stop pointing the AWS CLI/SDK at floci
+uv run cdk bootstrap --profile <your-aws-cli-profile>   # once per AWS account/region
 uv run cdk deploy RdsAuroraStack --profile <your-aws-cli-profile>
 ```
 

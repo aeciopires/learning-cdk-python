@@ -82,6 +82,7 @@ uv run pytest tests/unit/test_43_resource_group_tagging.py -v
 ```bash
 # From the repository root - see ../../REQUIREMENTS.md for eval $(floci env)
 eval $(floci env)
+uv run cdk bootstrap   # once per floci instance - safe to re-run; see REQUIREMENTS.md section 5.7
 uv run cdk synth ResourceGroupTaggingStack
 uv run cdk deploy ResourceGroupTaggingStack --require-approval never
 ```
@@ -95,6 +96,7 @@ feature over resources you already pay for individually - see
 
 ```bash
 unset AWS_ENDPOINT_URL   # stop pointing the AWS CLI/SDK at floci
+uv run cdk bootstrap --profile <your-aws-cli-profile>   # once per AWS account/region
 uv run cdk deploy ResourceGroupTaggingStack --profile <your-aws-cli-profile>
 ```
 

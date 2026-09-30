@@ -276,6 +276,16 @@ written in English by convention.
   group's description is engine-neutral, so switching engines on a
   deployed stack doesn't try to replace the named security group
   ("already exists"). Its tests grew from 4 to 12.
+- Documented `cdk bootstrap`, which a fresh floci (a new computer, or
+  after `make floci-destroy`) needs before the first `cdk deploy` -
+  otherwise the deploy fails with `SsmParameterNotFound: SSM parameter
+  /cdk-bootstrap/hnb659fds/version not found`. New `REQUIREMENTS.md`
+  section 5.7 explains what bootstrapping creates, why the error mentions
+  SSM (every synthesized template reads that parameter), why it's per
+  computer (floci's state lives in the uncommitted `./.floci/`), and when
+  to re-run it. Also added as step 8 of `REQUIREMENTS.md` section 0, to
+  every module README's "Deploy with floci" and "Deploy to real AWS"
+  commands, and to both slide decks.
 - Module counts updated from 44 to 46 (and 43 to 45 deployable stacks)
   across `README.md`, `CLAUDE.md`, `REQUIREMENTS.md`, `docs/`, the
   enterprise example's README, and both slide decks.

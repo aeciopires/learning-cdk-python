@@ -78,6 +78,7 @@ uv run pytest tests/unit/test_30_alb.py -v
 ```bash
 # From the repository root - see ../../REQUIREMENTS.md for eval $(floci env)
 eval $(floci env)
+uv run cdk bootstrap   # once per floci instance - safe to re-run; see REQUIREMENTS.md section 5.7
 uv run cdk synth AlbStack
 uv run cdk deploy AlbStack --require-approval never
 ```
@@ -90,6 +91,7 @@ healthy targets - see [Notes and cautions](#notes-and-cautions).
 
 ```bash
 unset AWS_ENDPOINT_URL   # stop pointing the AWS CLI/SDK at floci
+uv run cdk bootstrap --profile <your-aws-cli-profile>   # once per AWS account/region
 uv run cdk deploy AlbStack --profile <your-aws-cli-profile>
 ```
 

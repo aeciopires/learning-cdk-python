@@ -84,6 +84,7 @@ uv run pytest tests/unit/test_13_ec2.py -v
 ```bash
 # From the repository root - see ../../REQUIREMENTS.md for eval $(floci env)
 eval $(floci env)
+uv run cdk bootstrap   # once per floci instance - safe to re-run; see REQUIREMENTS.md section 5.7
 uv run cdk synth Ec2Stack
 uv run cdk deploy Ec2Stack --require-approval never
 ```
@@ -103,6 +104,7 @@ current rate in your region. Stop or destroy the instance when you are done
 
 ```bash
 unset AWS_ENDPOINT_URL   # stop pointing the AWS CLI/SDK at floci
+uv run cdk bootstrap --profile <your-aws-cli-profile>   # once per AWS account/region
 uv run cdk deploy Ec2Stack --profile <your-aws-cli-profile>
 ```
 

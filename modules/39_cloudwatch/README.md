@@ -82,6 +82,7 @@ uv run pytest tests/unit/test_39_cloudwatch.py -v
 ```bash
 # From the repository root - see ../../REQUIREMENTS.md for eval $(floci env)
 eval $(floci env)
+uv run cdk bootstrap   # once per floci instance - safe to re-run; see REQUIREMENTS.md section 5.7
 uv run cdk synth CloudWatchStack
 uv run cdk deploy CloudWatchStack --require-approval never
 ```
@@ -95,6 +96,7 @@ tier) - see [Reference 5](#references).
 
 ```bash
 unset AWS_ENDPOINT_URL   # stop pointing the AWS CLI/SDK at floci
+uv run cdk bootstrap --profile <your-aws-cli-profile>   # once per AWS account/region
 uv run cdk deploy CloudWatchStack --profile <your-aws-cli-profile>
 ```
 

@@ -99,6 +99,7 @@ uv run pytest tests/unit/test_45_documentdb.py -v
 ```bash
 # From the repository root - see ../../REQUIREMENTS.md for eval $(floci env)
 eval $(floci env)
+uv run cdk bootstrap   # once per floci instance - safe to re-run; see REQUIREMENTS.md section 5.7
 uv run cdk synth DocumentDbStack
 uv run cdk deploy DocumentDbStack --require-approval never
 ```
@@ -119,6 +120,7 @@ ongoing hourly cost the moment it is deployed.
 
 ```bash
 unset AWS_ENDPOINT_URL   # stop pointing the AWS CLI/SDK at floci
+uv run cdk bootstrap --profile <your-aws-cli-profile>   # once per AWS account/region
 uv run cdk deploy DocumentDbStack --profile <your-aws-cli-profile>
 ```
 

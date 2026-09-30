@@ -88,6 +88,7 @@ validation, so this certificate is issued immediately.
 ```bash
 # From the repository root - see ../../REQUIREMENTS.md for eval $(floci env)
 eval $(floci env)
+uv run cdk bootstrap   # once per floci instance - safe to re-run; see REQUIREMENTS.md section 5.7
 uv run cdk synth AcmStack
 uv run cdk deploy AcmStack --require-approval never
 ```
@@ -100,6 +101,7 @@ free to deploy as-is, but the certificate will sit in
 
 ```bash
 unset AWS_ENDPOINT_URL   # stop pointing the AWS CLI/SDK at floci
+uv run cdk bootstrap --profile <your-aws-cli-profile>   # once per AWS account/region
 uv run cdk deploy AcmStack --profile <your-aws-cli-profile>
 ```
 

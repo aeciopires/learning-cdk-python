@@ -134,7 +134,11 @@ for why it is not a 45th module.
 6. A `README.md` in the same directory, matching the section structure of
    `modules/03_vpc/README.md` (Overview, What you will learn, AWS services
    and CDK constructs used, Prerequisites, Tests, Deploy with floci, Deploy
-   to real AWS, Verify, Clean up, Notes and cautions, References).
+   to real AWS, Verify, Clean up, Notes and cautions, References). Both
+   deploy sections start with a `uv run cdk bootstrap` line (floci: "once
+   per floci instance"; real AWS: "once per AWS account/region") - a fresh
+   environment fails the first `cdk deploy` with `SsmParameterNotFound`
+   otherwise (see `REQUIREMENTS.md` section 5.7).
 7. A `tests/unit/test_NN_service.py` file (same numbering as the module
    directory) that builds the stack with the shared `config` fixture and
    asserts on its synthesized template via `aws_cdk.assertions` - see
@@ -313,7 +317,8 @@ renamed, or removed, re-check every anchor link in that file.
 3. **Follow the module contract exactly** - see [section 3](#3-the-module-contract).
 4. **Validate it actually synthesizes**: `uv run cdk synth <StackId>` must
    succeed with no errors. Where Docker is available, `docker compose up -d
-   floci` then `uv run cdk deploy <StackId> --require-approval never`
+   floci`, `uv run cdk bootstrap` (once per floci instance), then
+   `uv run cdk deploy <StackId> --require-approval never`
    followed by `uv run cdk destroy <StackId> -f` is the full round-trip
    check.
 5. **Write and run its unit tests**: `uv run pytest tests/unit/test_NN_service.py -v`

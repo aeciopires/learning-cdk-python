@@ -98,9 +98,18 @@ uv run pytest tests/unit/test_01_iam.py -v
 
 ```bash
 # From the repository root - make sure you've loaded .env (see REQUIREMENTS.md section 0)
+uv run cdk bootstrap   # once per floci instance - safe to re-run; see REQUIREMENTS.md section 5.7
 uv run cdk synth IamStack     # generates the CloudFormation template, creates nothing
 uv run cdk deploy IamStack --require-approval never
 ```
+
+The `cdk bootstrap` line is needed once per floci instance - the first
+time on each computer, and again after deleting floci's data. Without it,
+`cdk deploy` stops with `SsmParameterNotFound: SSM parameter
+/cdk-bootstrap/hnb659fds/version not found ... Has the environment been
+bootstrapped?` - see
+[`../../REQUIREMENTS.md`, section 5.7](../../REQUIREMENTS.md#57---bootstrapping-the-cdk-once-per-floci-instance-or-aws-accountregion)
+for why.
 
 `cdk synth` is worth running on its own the first time: open
 `cdk.out/IamStack.template.json` afterward and find the two IAM policy
@@ -111,6 +120,7 @@ the Python code you just read.
 
 ```bash
 unset AWS_ENDPOINT_URL   # stop pointing the AWS CLI/SDK at floci
+uv run cdk bootstrap --profile <your-aws-cli-profile>   # once per AWS account/region
 uv run cdk deploy IamStack --profile <your-aws-cli-profile>
 ```
 

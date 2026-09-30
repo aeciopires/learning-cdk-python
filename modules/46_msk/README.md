@@ -108,6 +108,7 @@ uv run pytest tests/unit/test_46_msk.py -v
 ```bash
 # From the repository root - see ../../REQUIREMENTS.md for eval $(floci env)
 eval $(floci env)
+uv run cdk bootstrap   # once per floci instance - safe to re-run; see REQUIREMENTS.md section 5.7
 uv run cdk synth MskStack
 uv run cdk deploy MskStack --require-approval never
 ```
@@ -129,6 +130,7 @@ cluster can take a while to create.
 
 ```bash
 unset AWS_ENDPOINT_URL   # stop pointing the AWS CLI/SDK at floci
+uv run cdk bootstrap --profile <your-aws-cli-profile>   # once per AWS account/region
 uv run cdk deploy MskStack --profile <your-aws-cli-profile>
 ```
 

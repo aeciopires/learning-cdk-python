@@ -85,6 +85,7 @@ uv run pytest tests/unit/test_31_nlb.py -v
 ```bash
 # From the repository root - see ../../REQUIREMENTS.md for eval $(floci env)
 eval $(floci env)
+uv run cdk bootstrap   # once per floci instance - safe to re-run; see REQUIREMENTS.md section 5.7
 uv run cdk synth NlbStack
 uv run cdk deploy NlbStack --require-approval never
 ```
@@ -97,6 +98,7 @@ Only do this if you understand the resources being created and their cost -
 
 ```bash
 unset AWS_ENDPOINT_URL   # stop pointing the AWS CLI/SDK at floci
+uv run cdk bootstrap --profile <your-aws-cli-profile>   # once per AWS account/region
 uv run cdk deploy NlbStack --profile <your-aws-cli-profile>
 ```
 

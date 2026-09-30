@@ -83,6 +83,7 @@ uv run pytest tests/unit/test_02_sts.py -v
 ## Deploy with floci (local, free)
 
 ```bash
+uv run cdk bootstrap   # once per floci instance - safe to re-run; see REQUIREMENTS.md section 5.7
 uv run cdk synth StsStack
 uv run cdk deploy StsStack --require-approval never
 ```
@@ -91,6 +92,7 @@ uv run cdk deploy StsStack --require-approval never
 
 ```bash
 unset AWS_ENDPOINT_URL
+uv run cdk bootstrap --profile <your-aws-cli-profile>   # once per AWS account/region
 uv run cdk deploy StsStack --profile <your-aws-cli-profile>
 ```
 

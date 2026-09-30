@@ -92,6 +92,7 @@ uv run pytest tests/unit/test_15_ecs.py -v
 ```bash
 # From the repository root - see ../../REQUIREMENTS.md for eval $(floci env)
 eval $(floci env)
+uv run cdk bootstrap   # once per floci instance - safe to re-run; see REQUIREMENTS.md section 5.7
 uv run cdk synth EcsStack
 uv run cdk deploy EcsStack --require-approval never
 ```
@@ -107,6 +108,7 @@ but it still isn't free. Destroy the stack when you're done (see
 
 ```bash
 unset AWS_ENDPOINT_URL   # stop pointing the AWS CLI/SDK at floci
+uv run cdk bootstrap --profile <your-aws-cli-profile>   # once per AWS account/region
 uv run cdk deploy EcsStack --profile <your-aws-cli-profile>
 ```
 

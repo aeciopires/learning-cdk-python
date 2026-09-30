@@ -467,6 +467,7 @@ uv run cdk --version              # confirms the CDK Toolkit is reachable throug
 
 ```bash
 uv run cdk list                                          # every module's stack id
+uv run cdk bootstrap                                     # once per floci / AWS account+region
 uv run cdk synth VpcStack                                 # safe, local, no endpoint call
 uv run cdk deploy VpcStack --require-approval never       # creates resources (floci by default)
 uv run cdk destroy VpcStack                                # tears them back down
@@ -788,6 +789,7 @@ docker compose up -d floci
 cp .env.example .env; set -a; source .env; set +a
 
 uv run cdk list                                            # see every module's stack id
+uv run cdk bootstrap                                       # once per floci (else: SsmParameterNotFound)
 uv run cdk synth VpcStack                                   # preview the CloudFormation template
 uv run cdk deploy VpcStack --require-approval never          # create the resources, against floci
 uv run cdk destroy VpcStack                                   # clean up when you're done

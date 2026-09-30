@@ -80,6 +80,7 @@ uv run pytest tests/unit/test_03_vpc.py -v
 ```bash
 # From the repository root - see ../../REQUIREMENTS.md for eval $(floci env)
 eval $(floci env)
+uv run cdk bootstrap   # once per floci instance - safe to re-run; see REQUIREMENTS.md section 5.7
 uv run cdk synth VpcStack
 uv run cdk deploy VpcStack --require-approval never
 ```
@@ -93,6 +94,7 @@ the modules that build on this one).
 
 ```bash
 unset AWS_ENDPOINT_URL   # stop pointing the AWS CLI/SDK at floci
+uv run cdk bootstrap --profile <your-aws-cli-profile>   # once per AWS account/region
 uv run cdk deploy VpcStack --profile <your-aws-cli-profile>
 ```
 

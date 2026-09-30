@@ -81,6 +81,7 @@ uv run pytest tests/unit/test_28_eventbridge.py -v
 ```bash
 # From the repository root - see ../../REQUIREMENTS.md for eval $(floci env)
 eval $(floci env)
+uv run cdk bootstrap   # once per floci instance - safe to re-run; see REQUIREMENTS.md section 5.7
 uv run cdk synth EventBridgeStack
 uv run cdk deploy EventBridgeStack --require-approval never
 ```
@@ -93,6 +94,7 @@ and CloudWatch Logs both have no hourly charge, only usage-based pricing).
 
 ```bash
 unset AWS_ENDPOINT_URL   # stop pointing the AWS CLI/SDK at floci
+uv run cdk bootstrap --profile <your-aws-cli-profile>   # once per AWS account/region
 uv run cdk deploy EventBridgeStack --profile <your-aws-cli-profile>
 ```
 
