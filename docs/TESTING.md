@@ -398,7 +398,7 @@ SOLID/builder-pattern combined-stack example, see its own README for what
 it is - has its own tests, in
 [`examples/enterprise_stack/tests/`](../examples/enterprise_stack/tests/),
 written in the same `aws_cdk.assertions` style this page has explained so
-far, plus one kind of test the 44 modules above never need. This section
+far, plus one kind of test the 46 modules above never need. This section
 covers only what's *different* there - everything above still applies.
 
 ### Why it's a separate test suite

@@ -55,19 +55,19 @@ scales 1 to 3 tasks by CPU utilization and is exposed through both the
 
 ## 1. What this is, and why it lives outside modules/
 
-The rest of this repository is **44 small, independent modules** - the
+The rest of this repository is **46 small, independent modules** - the
 whole point, explained in [`../../CLAUDE.md`](../../CLAUDE.md), is that
 each one teaches *one* AWS service in isolation, with its own stack, its
 own README, and its own unit test. `app.py` at the repository root
-auto-discovers and deploys all 44 as 44 **separate** CloudFormation
-stacks.
+auto-discovers and deploys every one that has a `stack.py` (45 of them) as
+**separate** CloudFormation stacks.
 
 This example answers a different, later question: *"now that I understand
 each service on its own, how would a real team combine several of them
 into one cohesive, production-style application - enabled/disabled per
 environment, reused across accounts and regions, without a 500-line
 `if/elif` chain?"* That's a fundamentally different shape (one Stack class,
-many optional resources, real inter-resource dependencies) from "44
+many optional resources, real inter-resource dependencies) from "46
 independent lessons," so it gets its own folder, its own `app.py`, and its
 own tests, entirely separate from the repository's main learning path and
 its `cdk.json`. Nothing here is registered in the root `app.py` - running
@@ -596,10 +596,10 @@ tags, and a long name like `staging` being rejected.
   `README.md` matching the module-contract section structure on purpose
   (see [`../../CLAUDE.md`, section 3](../../CLAUDE.md#3-the-module-contract):
   that contract is specifically for `modules/NN_service/`), is not
-  auto-discovered by the root `app.py`, and is not one of the 44 numbered
+  auto-discovered by the root `app.py`, and is not one of the 46 numbered
   modules or phases in
   [`../../docs/LEARNING-PATH.md`](../../docs/LEARNING-PATH.md) - that
-  page's own closing "Beyond the 44 modules" section links here as an
+  page's own closing "Beyond the 46 modules" section links here as an
   optional next step, not as a module.
 - **`prd.json`'s explicit accounts are placeholders** (`111111111111`),
   not real AWS accounts - substitute your own before ever attempting a

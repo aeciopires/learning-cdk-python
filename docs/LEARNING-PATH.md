@@ -13,7 +13,7 @@
   - [Phase 9 - Application identity and communication](#phase-9---application-identity-and-communication)
   - [Phase 10 - Protection and detection](#phase-10---protection-and-detection)
   - [Phase 11 - Governance and operations](#phase-11---governance-and-operations)
-  - [Beyond the 44 modules](#beyond-the-44-modules)
+  - [Beyond the 46 modules](#beyond-the-46-modules)
     - [Good practice vs. bad practice, at a glance](#good-practice-vs-bad-practice-at-a-glance)
     - [SOLID principles](#solid-principles)
     - [Semantic Versioning across repositories](#semantic-versioning-across-repositories)
@@ -23,13 +23,18 @@
 
 # Learning path
 
-44 modules, each a standalone, minimal AWS CDK (Python) stack that teaches
+46 modules, each a standalone, minimal AWS CDK (Python) stack that teaches
 one AWS service, grouped into 11 phases ordered the way a beginner would
 reasonably want to learn them: identity and networking first (almost
 everything else depends on them conceptually), then compute and storage,
 then the more specialized services. You do not have to follow the order -
 every module is independently deployable - but it is the order this
 repository recommends for a first pass.
+
+Modules 45 (DocumentDB) and 46 (MSK) were added after the original 44, so
+their numbers are out of sequence: each one is listed in the phase it
+belongs to (Databases and Messaging), not at the end. Numbers are never
+reused or shifted, so links to existing modules never break.
 
 ## How to use this path
 
@@ -89,8 +94,9 @@ repository recommends for a first pass.
 | 19 | [`modules/19_rds_postgresql`](../modules/19_rds_postgresql/README.md) | `RdsPostgresqlStack` | RDS for PostgreSQL |
 | 20 | [`modules/20_rds_aurora`](../modules/20_rds_aurora/README.md) | `RdsAuroraStack` | Aurora PostgreSQL |
 | 21 | [`modules/21_dynamodb`](../modules/21_dynamodb/README.md) | `DynamoDbStack` | DynamoDB |
-| 22 | [`modules/22_elasticache`](../modules/22_elasticache/README.md) | `ElastiCacheStack` | ElastiCache (Redis OSS) |
+| 22 | [`modules/22_elasticache`](../modules/22_elasticache/README.md) | `ElastiCacheStack` | ElastiCache (Valkey or Redis OSS) |
 | 23 | [`modules/23_opensearch`](../modules/23_opensearch/README.md) | `OpenSearchStack` | Amazon OpenSearch Service |
+| 45 | [`modules/45_documentdb`](../modules/45_documentdb/README.md) | `DocumentDbStack` | Amazon DocumentDB (with MongoDB compatibility) |
 
 ## Phase 6 - Data and analytics
 
@@ -107,6 +113,7 @@ repository recommends for a first pass.
 | 27 | [`modules/27_sns`](../modules/27_sns/README.md) | `SnsStack` | SNS |
 | 28 | [`modules/28_eventbridge`](../modules/28_eventbridge/README.md) | `EventBridgeStack` | EventBridge |
 | 29 | [`modules/29_step_functions`](../modules/29_step_functions/README.md) | `StepFunctionsStack` | Step Functions |
+| 46 | [`modules/46_msk`](../modules/46_msk/README.md) | `MskStack` | Amazon MSK (Managed Streaming for Apache Kafka) |
 
 ## Phase 8 - Edge, delivery, and APIs
 
@@ -143,7 +150,7 @@ repository recommends for a first pass.
 | 43 | [`modules/43_resource_group_tagging`](../modules/43_resource_group_tagging/README.md) | `ResourceGroupTaggingStack` | Resource Groups & Tagging |
 | 44 | [`modules/44_resource_quotas`](../modules/44_resource_quotas/README.md) | *(none - see module)* | Service Quotas |
 
-## Beyond the 44 modules
+## Beyond the 46 modules
 
 Each module above is deliberately minimal and self-contained - the whole
 point is to learn *one* AWS service without anything else competing for
@@ -199,7 +206,7 @@ explains each one for beginners, against real code from this repository.
 
 ### Semantic Versioning across repositories
 
-The 44 modules above all live in, and release from, this one repository -
+The 46 modules above all live in, and release from, this one repository -
 the right default for a learning path. A real organization with several
 teams often splits shared building blocks (a VPC builder, an IAM-role
 builder, ...) into their **own git repositories**, each released under its

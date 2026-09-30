@@ -107,7 +107,7 @@ Now, step by step:
    set -a; source .env; set +a
    ```
 7. **Confirm everything is wired up correctly** - this should print a CDK
-   Toolkit version, then list 43 stack ids (one per deployable module - see
+   Toolkit version, then list 45 stack ids (one per deployable module - see
    [`docs/LEARNING-PATH.md`](docs/LEARNING-PATH.md)), with no errors:
    ```bash
    uv run cdk --version

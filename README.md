@@ -16,19 +16,20 @@ A beginner learning path for managing AWS resources with the
 [AWS Cloud Development Kit (CDK) v2](https://docs.aws.amazon.com/cdk/v2/guide/home.html)
 in Python, using [uv](https://docs.astral.sh/uv/) as the package manager
 and [floci](https://floci.io) (via `docker-compose.yml`, or `floci-cli`) as
-a free, local AWS emulator - 44 small, independent, deployable modules, one
+a free, local AWS emulator - 46 small, independent, deployable modules, one
 per AWS service, each with its own explanation and step-by-step
 instructions. No AWS account or cost is required to complete it.
 
 ## What this is
 
-- **44 modules** (`modules/01_iam` through `modules/44_resource_quotas`),
+- **46 modules** (`modules/01_iam` through `modules/46_msk`),
   grouped into 11 phases in [`docs/LEARNING-PATH.md`](docs/LEARNING-PATH.md)
   - IAM, STS, VPC networking (subnets, security groups, route tables,
     Internet/NAT/Transit Gateway, VPC Peering), KMS, Secrets Manager,
     Parameter Store, ACM, S3, EC2, ECR, ECS, EKS, Lambda, RDS (MySQL,
-    PostgreSQL, Aurora), DynamoDB, ElastiCache, OpenSearch, Kinesis,
-    Athena, SQS, SNS, EventBridge, Step Functions, ALB, NLB, CloudFront,
+    PostgreSQL, Aurora), DynamoDB, ElastiCache (Valkey or Redis OSS),
+    OpenSearch, DocumentDB, Kinesis, Athena, SQS, SNS, EventBridge, Step
+    Functions, MSK (Apache Kafka), ALB, NLB, CloudFront,
     Route 53, API Gateway, Cognito, SES, WAF, GuardDuty, CloudWatch,
     CloudTrail, AWS Backup, Cost Explorer, and Resource Groups & Tagging.
 - Each module is a minimal, real, deployable **AWS CDK stack written in
@@ -66,11 +67,11 @@ uv run cdk destroy IamStack           # and clean it up when you're done
 | | |
 |---|---|
 | Prerequisites, floci/uv setup, tagging and naming policy | [`REQUIREMENTS.md`](REQUIREMENTS.md) |
-| The full 44-module path, grouped into 11 phases | [`docs/LEARNING-PATH.md`](docs/LEARNING-PATH.md) |
+| The full 46-module path, grouped into 11 phases | [`docs/LEARNING-PATH.md`](docs/LEARNING-PATH.md) |
 | Diagrams: the CDK workflow, the floci local environment, and how AWS resources relate to each other | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) |
 | Slide decks covering the tooling and the hands-on lab (en-US / pt-BR) | [`docs/slides/SLIDES-en-US.md`](docs/slides/SLIDES-en-US.md) · [`docs/slides/SLIDES-pt-BR.md`](docs/slides/SLIDES-pt-BR.md) |
 | Referencing vs. fully importing an existing (manually-created or legacy) AWS resource | [`docs/IMPORTING-EXISTING-RESOURCES.md`](docs/IMPORTING-EXISTING-RESOURCES.md) |
-| A combined, SOLID/builder-pattern example app (past the 44 independent modules) | [`examples/enterprise_stack/README.md`](examples/enterprise_stack/README.md) |
+| A combined, SOLID/builder-pattern example app (past the 46 independent modules) | [`examples/enterprise_stack/README.md`](examples/enterprise_stack/README.md) |
 | Conventions for anyone (human or AI assistant) extending this repository | [`CLAUDE.md`](CLAUDE.md) |
 | Changelog | [`CHANGELOG.md`](CHANGELOG.md) |
 

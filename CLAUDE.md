@@ -27,7 +27,7 @@ editing a module.
 `learning-cdk-python` is a **public, beginner-oriented** learning path for
 managing AWS resources with the [AWS Cloud Development Kit (CDK) v2](https://docs.aws.amazon.com/cdk/v2/guide/home.html)
 in Python, using [uv](https://docs.astral.sh/uv/) as the package/venv
-manager. It is 44 small, independent modules (`modules/NN_service/`), each
+manager. It is 46 small, independent modules (`modules/NN_service/`), each
 teaching one AWS service through a minimal, deployable CDK stack plus a
 README that explains it. Every module is meant to be deployed first against
 [floci](https://floci.io), a local AWS emulator run via `docker-compose.yml`
@@ -68,7 +68,7 @@ whenever one is edited.
 │   └── check-deps.sh          # what `make check` runs - OS + every tool in REQUIREMENTS.md section 3
 ├── shared/                  # tagging.py, naming.py, config.py - see section 5 and 6
 ├── docs/
-│   ├── LEARNING-PATH.md    # the full 44-module table, grouped into 11 phases
+│   ├── LEARNING-PATH.md    # the full 46-module table, grouped into 11 phases
 │   ├── TESTING.md           # how CDK unit tests work here, and how to write one - see section 3, point 7
 │   ├── ARCHITECTURE.md      # diagrams: CDK workflow, floci environment, module wiring, VPC resources
 │   ├── IMPORTING-EXISTING-RESOURCES.md  # from_* references vs. cdk import vs. cdk migrate
@@ -95,7 +95,10 @@ whenever one is edited.
 ```
 
 See [`docs/LEARNING-PATH.md`](docs/LEARNING-PATH.md) for the full list of
-44 modules, their stack ids, and which of the 11 phases each belongs to.
+46 modules, their stack ids, and which of the 11 phases each belongs to.
+**A new module takes the next free number** (as `45_documentdb` and
+`46_msk` did) and is listed in the phase it belongs to - existing modules
+are never renumbered, so no link or stack id ever changes.
 `modules/03_vpc/` is the reference module every other module was written to
 match - read it before writing or editing any other module. See
 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for diagrams of the CDK

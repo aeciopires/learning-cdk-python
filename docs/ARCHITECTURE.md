@@ -117,7 +117,7 @@ how those resources relate to each other:
   CIDR block (`10.0.0.0/16`) - nothing outside the VPC can reach it.
 - This same shape - one or two central resources with several dependent
   resources wired to them by the L2 construct - repeats throughout the
-  other 43 modules; each module's own README documents its specific
+  other 45 modules; each module's own README documents its specific
   resources under "AWS services and CDK constructs used".
 
 ## 5. Regenerating these diagrams

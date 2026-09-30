@@ -212,6 +212,23 @@ written in English by convention.
 - `make typecheck`: runs `mypy` over `shared/`, `app.py`,
   `examples/enterprise_stack/`, and each `modules/NN_service/stack.py` on
   its own.
+- `modules/45_documentdb` (`DocumentDbStack`, Phase 5 - Databases): an
+  Amazon DocumentDB cluster with one `db.t3.medium` instance (engine
+  `8.0.0`) built with the L2 `aws_docdb.DatabaseCluster`, in a 2-AZ VPC,
+  with storage encryption and a Secrets Manager-generated master password
+  passed as a `{{resolve:secretsmanager:...}}` dynamic reference. The
+  secret is created explicitly because `DatabaseCluster`'s own generated
+  secret adds a `SecretTargetAttachment` that floci can't deploy.
+- `modules/46_msk` (`MskStack`, Phase 7 - Messaging): a provisioned Amazon
+  MSK cluster (Kafka `3.9.x`, two `kafka.t3.small` brokers, one per AZ) with
+  IAM authentication (port 9098) and TLS, built with the L1
+  `aws_msk.CfnCluster` (the only stable construct - the L2 lives in the
+  alpha package this repository doesn't use).
+- Tests for both (`tests/unit/test_45_documentdb.py`, `test_46_msk.py`);
+  the repository stays at 100% coverage (293 tests, up from 272).
+- `docs/LEARNING-PATH.md` and `CLAUDE.md`: new modules take the next free
+  number and are listed in the phase they belong to; existing modules are
+  never renumbered.
 
 ### Changed
 
@@ -250,6 +267,18 @@ written in English by convention.
   commands in the docs. Module 44 now has a test file (`CLAUDE.md` section
   3, the module's README "Tests" section, and `docs/TESTING.md` are updated
   to match).
+- `modules/22_elasticache` supports both **Valkey** (the new default) and
+  **Redis OSS**, chosen with `CDK_ELASTICACHE_ENGINE` (validated at synth
+  time; documented in `.env.example`). It now uses `CfnReplicationGroup`
+  instead of `CfnCacheCluster`, because `AWS::ElastiCache::CacheCluster`
+  only accepts `memcached`/`redis`. In-transit and at-rest encryption are
+  on for both engines (in-transit is required for Valkey). The security
+  group's description is engine-neutral, so switching engines on a
+  deployed stack doesn't try to replace the named security group
+  ("already exists"). Its tests grew from 4 to 12.
+- Module counts updated from 44 to 46 (and 43 to 45 deployable stacks)
+  across `README.md`, `CLAUDE.md`, `REQUIREMENTS.md`, `docs/`, the
+  enterprise example's README, and both slide decks.
 
 ### Fixed
 

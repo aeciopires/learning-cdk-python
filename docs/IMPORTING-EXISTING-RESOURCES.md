@@ -28,7 +28,7 @@ This page explains, from zero, the ways an AWS CDK app can work with an
 AWS resource that **already exists** - created by hand in the console,
 by a colleague's script, by Terraform, by a different CDK app, or by a
 legacy CloudFormation stack nobody wants to touch directly anymore. None
-of the 44 modules in this learning path need this - every module creates
+of the 46 modules in this learning path need this - every module creates
 its own resources from scratch - but it's one of the first real questions
 a team asks once they start applying CDK to an existing AWS account rather
 than a brand-new one, so it's documented here on its own.
