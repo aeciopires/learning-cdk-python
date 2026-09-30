@@ -1,13 +1,10 @@
 <!-- TOC -->
 
 - [Changelog](#changelog)
-  - [\[Unreleased\]](#unreleased)
-    - [Changed](#changed)
+  - [\[0.1.0 \] - 2026-10-30](#010----2026-10-30)
     - [Added](#added)
+    - [Changed](#changed)
     - [Fixed](#fixed)
-  - [\[0.1.0 \] - 2026-10-29](#010----2026-10-29)
-    - [Added](#added-1)
-    - [Fixed](#fixed-1)
 
 <!-- TOC -->
 
@@ -17,102 +14,7 @@ All notable changes to this project are documented in this file. The format
 loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 written in English by convention.
 
-## [Unreleased]
-
-### Changed
-
-- The AWS CLI v2 is now installed and managed by mise: `mise.toml` pins
-  `aws-cli = "2"` next to `python`, so `mise install` sets up both.
-  `REQUIREMENTS.md` sections 3.1-3.3 drop the manual `.zip`
-  installer/`brew install awscli` steps (kept as a no-mise fallback in
-  section 3.3), and
-  `make check` points to `mise install` when `aws` is missing.
-- Node.js and npm are now pinned in `mise.toml` (`node = "26"`, `npm =
-  "11"`, npm via the `aqua:npm/cli` backend) and installed by `mise
-  install`, replacing the NodeSource/Homebrew `node` install steps in
-  `REQUIREMENTS.md` sections 3.1/3.2 (NodeSource `setup_26.x` kept as a
-  no-mise fallback). `REQUIREMENTS.md` section 3.3 is renamed "Managing
-  tool versions with mise" and documents the pins, upgrades, and conflicts
-  with other Node.js version managers (nvm, fnm, Volta). `make check` now
-  expects Node.js >= 26 (was >= 20) and checks npm >= 11.
-- Python 3.14 (was 3.12): `.python-version`, `mise.toml`, `pyproject.toml`
-  (`requires-python = ">=3.14"`, ruff `target-version = "py314"`),
-  `uv.lock`, `REQUIREMENTS.md`, and both slide decks. `aws-cdk-lib`
-  2.271.0 lists Python 3.14 as supported on PyPI. On 3.14, every unit test
-  (root and `examples/enterprise_stack/`) passes, every module stack and
-  the enterprise example (`dev`/`staging`) synthesize, and a floci
-  deploy/destroy round-trip works. `make check` now expects Python 3.14.
-- Environments use short names only: `dev`, `stg` (was `staging`), `prd`
-  (was `prod`) - for the `environment` tag and the environment segment of
-  every resource name. `shared/config.py` gains `ENVIRONMENTS` and
-  `validate_environment()`; `CDK_ENVIRONMENT` is now validated (a long name
-  like `staging` fails with a "did you mean `stg`?" hint). In
-  `examples/enterprise_stack/`, `environments/staging.json`/`prod.json` are
-  renamed `stg.json`/`prd.json`, and `ENTERPRISE_ENVIRONMENT` is validated
-  the same way.
-- `CLAUDE.md`: coverage is now part of the module contract (section 3,
-  point 8), with a new "check coverage" workflow step (section 10, point 6)
-  and "what not to do" rules for coverage and for keeping the `uv run`
-  commands in the docs. Module 44 now has a test file (`CLAUDE.md` section
-  3, the module's README "Tests" section, and `docs/TESTING.md` are updated
-  to match).
-
-### Added
-
-- Test coverage, with a goal of 100% and a minimum of 80%: `pytest-cov` as a
-  dev dependency, and `[tool.coverage.*]` settings in `pyproject.toml`
-  (branch coverage, `fail_under = 80`, and only two exclusions: the
-  `__main__` guard and `raise NotImplementedError`). `make coverage` runs
-  both test suites with a terminal report and an HTML report
-  (`htmlcov/`); `SKIP_COVERAGE_CHECK=1` reports without enforcing the
-  minimum. The repository went from 90% to **100%** line and branch
-  coverage (272 tests, up from 228).
-- New tests: `tests/unit/test_app.py` (the root `app.py`'s module
-  discovery), `test_shared_config.py`, `test_shared_naming.py`,
-  `test_shared_tagging.py` (the `shared/` package, including the
-  environment short-name policy, cell-based tags, and every error), and
-  `test_44_resource_quotas.py` (module 44's boto3 `script.py`, with
-  botocore's `Stubber`); in `examples/enterprise_stack/tests/`,
-  `test_app.py`, `test_builders.py`, and `test_environment_config.py`, plus
-  two registry error cases in `test_registry.py`.
-- `docs/TESTING.md`, "Test coverage": a from-zero explanation of what
-  coverage measures, how to run and read the report, the 100%/80% rules,
-  and how to close a gap, step by step.
-- Makefile targets for floci: `floci-start` (idempotent; waits for the
-  healthcheck; `UI=floci-ui` and/or `UI=floci-dash` also starts a
-  console), `floci-stop`, `floci-status` (state and URLs), and
-  `floci-destroy` (also deletes `./.floci/`; asks first unless
-  `CONFIRM=yes`).
-- Makefile targets for the CDK: `cdk-synth` (`STACK=`, every stack, or
-  `EXAMPLE=enterprise ENV=dev|stg|prd`) and `cdk-deploy` (floci only, with
-  bootstrap). Both run `floci-status` and `floci-start` first. They are
-  documented in `REQUIREMENTS.md` section 5.6 as optional shortcuts:
-  every README keeps the full `uv run ...` commands.
-- Both slide decks: an "Optional `make` shortcuts" slide, and `make
-  coverage` plus current test and coverage numbers on the quality-gates
-  slide.
-- `make typecheck`: runs `mypy` over `shared/`, `app.py`,
-  `examples/enterprise_stack/`, and each `modules/NN_service/stack.py` on
-  its own.
-
-### Fixed
-
-- `examples/enterprise_stack/README.md` section 9 said "from the
-  repository root" but ran `cp ../../.env.example .env`; it's now
-  `cp .env.example .env`.
-- The documented type-check command (`uv run mypy shared modules app.py`,
-  in `CONTRIBUTING.md` and both slide decks) never ran: mypy rejects
-  `modules/01_iam/` and the other digit-prefixed directories as invalid
-  package names. Replaced by `make typecheck`.
-- `examples/enterprise_stack/app.py`: `ENTERPRISE_ENVIRONMENT` only chose
-  the JSON file - the `environment` tag and resource names still came from
-  `CDK_ENVIRONMENT` (default `dev`), so a staging cell was named
-  `...-dev-...` despite its README showing `...-staging-...`. The selected
-  environment now sets both.
-- `shared/tagging.py`: a `mypy` error (`cell_id` passed as `str | None` to
-  `Tags.add`) the broken command above had been hiding.
-
-## [0.1.0 ] - 2026-10-29
+## [0.1.0 ] - 2026-10-30
 
 ### Added
 
@@ -189,7 +91,6 @@ written in English by convention.
   3.4 explains how to run and read it; wired into the section 0
   walkthrough (now 9 steps) and `CONTRIBUTING.md`'s workflow as the first
   command to run in a fresh clone.
-
 - `docs/slides/SLIDES-en-US.md` and `docs/slides/SLIDES-pt-BR.md`: a
   [Marp](https://marp.app) slide deck (bilingual pair, kept in parity, 35
   slides each) covering this repository's tooling (uv, AWS CDK v2/`aws-cdk-lib`,
@@ -209,7 +110,6 @@ written in English by convention.
   required for the local images on the PDF/PPTX/PNG export paths, and the
   HTML export must be written into `docs/slides/` itself - see the next
   entry).
-
 - `docs/IMPORTING-EXISTING-RESOURCES.md`: a standalone guide to the two
   different things people mean by "import" in CDK - referencing an
   existing resource without managing it (`from_bucket_arn()`,
@@ -277,6 +177,79 @@ written in English by convention.
   `cdk synth` of `environments/staging.json`, now extended to enable
   `ecr`/`ecs`/`alb`/`nlb` together (no live AWS account needed, since
   none of the four require a synth-time account lookup, unlike `ec2`).
+- Test coverage, with a goal of 100% and a minimum of 80%: `pytest-cov` as a
+  dev dependency, and `[tool.coverage.*]` settings in `pyproject.toml`
+  (branch coverage, `fail_under = 80`, and only two exclusions: the
+  `__main__` guard and `raise NotImplementedError`). `make coverage` runs
+  both test suites with a terminal report and an HTML report
+  (`htmlcov/`); `SKIP_COVERAGE_CHECK=1` reports without enforcing the
+  minimum. The repository went from 90% to **100%** line and branch
+  coverage (272 tests, up from 228).
+- New tests: `tests/unit/test_app.py` (the root `app.py`'s module
+  discovery), `test_shared_config.py`, `test_shared_naming.py`,
+  `test_shared_tagging.py` (the `shared/` package, including the
+  environment short-name policy, cell-based tags, and every error), and
+  `test_44_resource_quotas.py` (module 44's boto3 `script.py`, with
+  botocore's `Stubber`); in `examples/enterprise_stack/tests/`,
+  `test_app.py`, `test_builders.py`, and `test_environment_config.py`, plus
+  two registry error cases in `test_registry.py`.
+- `docs/TESTING.md`, "Test coverage": a from-zero explanation of what
+  coverage measures, how to run and read the report, the 100%/80% rules,
+  and how to close a gap, step by step.
+- Makefile targets for floci: `floci-start` (idempotent; waits for the
+  healthcheck; `UI=floci-ui` and/or `UI=floci-dash` also starts a
+  console), `floci-stop`, `floci-status` (state and URLs), and
+  `floci-destroy` (also deletes `./.floci/`; asks first unless
+  `CONFIRM=yes`).
+- Makefile targets for the CDK: `cdk-synth` (`STACK=`, every stack, or
+  `EXAMPLE=enterprise ENV=dev|stg|prd`) and `cdk-deploy` (floci only, with
+  bootstrap). Both run `floci-status` and `floci-start` first. They are
+  documented in `REQUIREMENTS.md` section 5.6 as optional shortcuts:
+  every README keeps the full `uv run ...` commands.
+- Both slide decks: an "Optional `make` shortcuts" slide, and `make
+  coverage` plus current test and coverage numbers on the quality-gates
+  slide.
+- `make typecheck`: runs `mypy` over `shared/`, `app.py`,
+  `examples/enterprise_stack/`, and each `modules/NN_service/stack.py` on
+  its own.
+
+### Changed
+
+- The AWS CLI v2 is now installed and managed by mise: `mise.toml` pins
+  `aws-cli = "2"` next to `python`, so `mise install` sets up both.
+  `REQUIREMENTS.md` sections 3.1-3.3 drop the manual `.zip`
+  installer/`brew install awscli` steps (kept as a no-mise fallback in
+  section 3.3), and
+  `make check` points to `mise install` when `aws` is missing.
+- Node.js and npm are now pinned in `mise.toml` (`node = "26"`, `npm =
+  "11"`, npm via the `aqua:npm/cli` backend) and installed by `mise
+  install`, replacing the NodeSource/Homebrew `node` install steps in
+  `REQUIREMENTS.md` sections 3.1/3.2 (NodeSource `setup_26.x` kept as a
+  no-mise fallback). `REQUIREMENTS.md` section 3.3 is renamed "Managing
+  tool versions with mise" and documents the pins, upgrades, and conflicts
+  with other Node.js version managers (nvm, fnm, Volta). `make check` now
+  expects Node.js >= 26 (was >= 20) and checks npm >= 11.
+- Python 3.14 (was 3.12): `.python-version`, `mise.toml`, `pyproject.toml`
+  (`requires-python = ">=3.14"`, ruff `target-version = "py314"`),
+  `uv.lock`, `REQUIREMENTS.md`, and both slide decks. `aws-cdk-lib`
+  2.271.0 lists Python 3.14 as supported on PyPI. On 3.14, every unit test
+  (root and `examples/enterprise_stack/`) passes, every module stack and
+  the enterprise example (`dev`/`staging`) synthesize, and a floci
+  deploy/destroy round-trip works. `make check` now expects Python 3.14.
+- Environments use short names only: `dev`, `stg` (was `staging`), `prd`
+  (was `prod`) - for the `environment` tag and the environment segment of
+  every resource name. `shared/config.py` gains `ENVIRONMENTS` and
+  `validate_environment()`; `CDK_ENVIRONMENT` is now validated (a long name
+  like `staging` fails with a "did you mean `stg`?" hint). In
+  `examples/enterprise_stack/`, `environments/staging.json`/`prod.json` are
+  renamed `stg.json`/`prd.json`, and `ENTERPRISE_ENVIRONMENT` is validated
+  the same way.
+- `CLAUDE.md`: coverage is now part of the module contract (section 3,
+  point 8), with a new "check coverage" workflow step (section 10, point 6)
+  and "what not to do" rules for coverage and for keeping the `uv run`
+  commands in the docs. Module 44 now has a test file (`CLAUDE.md` section
+  3, the module's README "Tests" section, and `docs/TESTING.md` are updated
+  to match).
 
 ### Fixed
 
@@ -291,7 +264,6 @@ written in English by convention.
   Fixed by giving each pair of constructs distinct IDs and by shortening
   just the physical name (the `Name` *tag* keeps the full convention, since
   tags have no such limit).
-
 - `docs/slides/SLIDES-en-US.md` / `SLIDES-pt-BR.md`: the tool logos and
   live floci/floci-dash screenshots (previously `<img src="../images/tools/...">`)
   broke in exported HTML whenever the output file was written outside
@@ -350,3 +322,17 @@ written in English by convention.
 - `app.py`: minor lint cleanup (direct attribute access instead of
   `getattr` with a constant name; made the file executable to match its
   shebang).
+- `examples/enterprise_stack/README.md` section 9 said "from the
+  repository root" but ran `cp ../../.env.example .env`; it's now
+  `cp .env.example .env`.
+- The documented type-check command (`uv run mypy shared modules app.py`,
+  in `CONTRIBUTING.md` and both slide decks) never ran: mypy rejects
+  `modules/01_iam/` and the other digit-prefixed directories as invalid
+  package names. Replaced by `make typecheck`.
+- `examples/enterprise_stack/app.py`: `ENTERPRISE_ENVIRONMENT` only chose
+  the JSON file - the `environment` tag and resource names still came from
+  `CDK_ENVIRONMENT` (default `dev`), so a staging cell was named
+  `...-dev-...` despite its README showing `...-staging-...`. The selected
+  environment now sets both.
+- `shared/tagging.py`: a `mypy` error (`cell_id` passed as `str | None` to
+  `Tags.add`) the broken command above had been hiding.
