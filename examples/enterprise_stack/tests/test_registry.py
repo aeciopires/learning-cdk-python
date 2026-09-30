@@ -82,3 +82,14 @@ def test_unknown_key_raises():
 
     with pytest.raises(KeyError):
         registry.ordered({"does-not-exist"})
+
+
+def test_a_builder_without_a_key_is_rejected():
+    with pytest.raises(ValueError, match="key must be a non-empty string"):
+        ResourceRegistry().register(_FakeBuilder(""))
+
+
+def test_registering_the_same_key_twice_is_rejected():
+    registry = _registry(_FakeBuilder("vpc"))
+    with pytest.raises(ValueError, match="already registered"):
+        registry.register(_FakeBuilder("vpc"))

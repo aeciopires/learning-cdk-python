@@ -58,7 +58,20 @@ uv run cdk deploy <StackId> --require-approval never  # deploy it to floci
 uv run cdk destroy <StackId>     # clean up
 uv run pytest tests/unit/test_NN_service.py -v  # that module's unit tests
 uv run pytest                    # every unit test in the repository
+make coverage                    # every test (repository + examples) with a coverage report - must pass (>= 80%)
 ```
+
+Once the commands above are familiar, `make cdk-synth STACK=<StackId>` /
+`make cdk-deploy STACK=<StackId>` (and `make floci-start`/`floci-stop`/
+`floci-status`/`floci-destroy`) are optional shortcuts for them - see
+[`REQUIREMENTS.md`, section 5.6](REQUIREMENTS.md#56---optional-make-shortcuts-for-floci-and-the-cdk).
+Documentation keeps showing the long `uv run ...` form.
+
+**Test coverage:** every change must keep `make coverage` passing - aim for
+100% of the code you add or change, never below the 80% repository minimum.
+`make coverage SKIP_COVERAGE_CHECK=1` reports without enforcing the
+minimum, for work in progress only. See
+[`docs/TESTING.md`, "Test coverage"](docs/TESTING.md#test-coverage).
 
 `uv run pytest` runs the unit tests in `tests/unit/` - one file per module
 with a `stack.py` - against the synthesized CloudFormation template, using

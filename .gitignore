@@ -6,6 +6,11 @@ __pycache__/
 .ruff_cache/
 .pytest_cache/
 
+# Test coverage (make coverage - see docs/TESTING.md)
+.coverage
+.coverage.*
+htmlcov/
+
 # uv / venv
 .venv/
 uv.lock.bak

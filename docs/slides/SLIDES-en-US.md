@@ -482,14 +482,34 @@ uv run cdk destroy VpcStack                                # tears them back dow
 uv run pytest                            # every unit test — no Docker/floci/AWS credentials needed
 uv run pytest tests/unit/test_03_vpc.py -v
 make typecheck                           # type checks with mypy (from __future__ import annotations everywhere)
-uv run ruff check .                        # linting
-make check                                # OS + every required/recommended/optional tool
+uv run ruff check .                      # linting
+make coverage                            # every test + coverage report (fails below 80%)
+make check                               # OS + every required/recommended/optional tool
 ```
 
 <div class="stats">
-  <div class="stat"><span class="num">199</span><span class="label">unit tests, 43 test files — one per module with a stack.py</span></div>
-  <div class="stat"><span class="num">~3s</span><span class="label">to run the whole suite — pure in-memory CloudFormation assertions</span></div>
+  <div class="stat"><span class="num">272</span><span class="label">tests in 54 files — every module (incl. 44's boto3 script), shared/, app.py, and the enterprise example</span></div>
+  <div class="stat"><span class="num">100%</span><span class="label">line + branch coverage — goal 100%, minimum accepted 80%</span></div>
+  <div class="stat"><span class="num">~5s</span><span class="label">to run everything — pure in-memory CloudFormation assertions</span></div>
 </div>
+
+---
+
+<span class="kicker">Once you know the long form</span>
+
+## Optional `make` shortcuts
+
+```bash
+make floci-start UI=floci-dash        # start floci (+ a console) and wait until healthy
+make floci-status                     # is it running? which URLs?
+make cdk-synth STACK=VpcStack         # = uv run cdk synth VpcStack
+make cdk-deploy STACK=SqsStack        # = uv run cdk bootstrap + uv run cdk deploy SqsStack
+make cdk-synth EXAMPLE=enterprise ENV=stg
+make floci-stop                       # pause - deployed resources are kept
+make floci-destroy                    # wipe floci and everything deployed to it (asks first)
+```
+
+`cdk-synth`/`cdk-deploy` check and start floci first; `cdk-deploy` only ever targets floci. Every README keeps the full `uv run ...` commands — the shortcuts are for when you already know what they run (`REQUIREMENTS.md` §5.6).
 
 ---
 

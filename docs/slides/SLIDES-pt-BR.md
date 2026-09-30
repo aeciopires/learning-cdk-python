@@ -482,14 +482,34 @@ uv run cdk destroy VpcStack                                  # desfaz tudo
 uv run pytest                            # todos os testes unitários — sem Docker/floci/credenciais AWS
 uv run pytest tests/unit/test_03_vpc.py -v
 make typecheck                           # checagem de tipos com mypy (from __future__ import annotations em todo arquivo)
-uv run ruff check .                        # lint
-make check                                # SO + cada ferramenta obrigatória/recomendada/opcional
+uv run ruff check .                      # lint
+make coverage                            # todos os testes + relatório de cobertura (falha abaixo de 80%)
+make check                               # SO + cada ferramenta obrigatória/recomendada/opcional
 ```
 
 <div class="stats">
-  <div class="stat"><span class="num">199</span><span class="label">testes unitários, 43 arquivos — um por módulo com stack.py</span></div>
-  <div class="stat"><span class="num">~3s</span><span class="label">para rodar toda a suíte — asserções puramente em memória sobre CloudFormation</span></div>
+  <div class="stat"><span class="num">272</span><span class="label">testes em 54 arquivos — todos os módulos (incl. o script boto3 do 44), shared/, app.py e o exemplo enterprise</span></div>
+  <div class="stat"><span class="num">100%</span><span class="label">cobertura de linhas + branches — meta 100%, mínimo aceito 80%</span></div>
+  <div class="stat"><span class="num">~5s</span><span class="label">para rodar tudo — asserções puramente em memória sobre CloudFormation</span></div>
 </div>
+
+---
+
+<span class="kicker">Depois de dominar a forma longa</span>
+
+## Atalhos opcionais com `make`
+
+```bash
+make floci-start UI=floci-dash        # inicia o floci (+ um console) e espera ficar saudável
+make floci-status                     # está rodando? quais URLs?
+make cdk-synth STACK=VpcStack         # = uv run cdk synth VpcStack
+make cdk-deploy STACK=SqsStack        # = uv run cdk bootstrap + uv run cdk deploy SqsStack
+make cdk-synth EXAMPLE=enterprise ENV=stg
+make floci-stop                       # pausa - os recursos implantados são mantidos
+make floci-destroy                    # apaga o floci e tudo que foi implantado nele (pergunta antes)
+```
+
+`cdk-synth`/`cdk-deploy` verificam e iniciam o floci antes; `cdk-deploy` só implanta no floci. Todo README mantém os comandos completos `uv run ...` — os atalhos são para quando você já sabe o que eles executam (`REQUIREMENTS.md` §5.6).
 
 ---
 

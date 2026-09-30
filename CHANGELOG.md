@@ -50,17 +50,56 @@ written in English by convention.
   `examples/enterprise_stack/`, `environments/staging.json`/`prod.json` are
   renamed `stg.json`/`prd.json`, and `ENTERPRISE_ENVIRONMENT` is validated
   the same way.
+- `CLAUDE.md`: coverage is now part of the module contract (section 3,
+  point 8), with a new "check coverage" workflow step (section 10, point 6)
+  and "what not to do" rules for coverage and for keeping the `uv run`
+  commands in the docs. Module 44 now has a test file (`CLAUDE.md` section
+  3, the module's README "Tests" section, and `docs/TESTING.md` are updated
+  to match).
 
 ### Added
 
-- `tests/unit/test_shared_config.py`: tests for the environment short-name
-  policy above.
+- Test coverage, with a goal of 100% and a minimum of 80%: `pytest-cov` as a
+  dev dependency, and `[tool.coverage.*]` settings in `pyproject.toml`
+  (branch coverage, `fail_under = 80`, and only two exclusions: the
+  `__main__` guard and `raise NotImplementedError`). `make coverage` runs
+  both test suites with a terminal report and an HTML report
+  (`htmlcov/`); `SKIP_COVERAGE_CHECK=1` reports without enforcing the
+  minimum. The repository went from 90% to **100%** line and branch
+  coverage (272 tests, up from 228).
+- New tests: `tests/unit/test_app.py` (the root `app.py`'s module
+  discovery), `test_shared_config.py`, `test_shared_naming.py`,
+  `test_shared_tagging.py` (the `shared/` package, including the
+  environment short-name policy, cell-based tags, and every error), and
+  `test_44_resource_quotas.py` (module 44's boto3 `script.py`, with
+  botocore's `Stubber`); in `examples/enterprise_stack/tests/`,
+  `test_app.py`, `test_builders.py`, and `test_environment_config.py`, plus
+  two registry error cases in `test_registry.py`.
+- `docs/TESTING.md`, "Test coverage": a from-zero explanation of what
+  coverage measures, how to run and read the report, the 100%/80% rules,
+  and how to close a gap, step by step.
+- Makefile targets for floci: `floci-start` (idempotent; waits for the
+  healthcheck; `UI=floci-ui` and/or `UI=floci-dash` also starts a
+  console), `floci-stop`, `floci-status` (state and URLs), and
+  `floci-destroy` (also deletes `./.floci/`; asks first unless
+  `CONFIRM=yes`).
+- Makefile targets for the CDK: `cdk-synth` (`STACK=`, every stack, or
+  `EXAMPLE=enterprise ENV=dev|stg|prd`) and `cdk-deploy` (floci only, with
+  bootstrap). Both run `floci-status` and `floci-start` first. They are
+  documented in `REQUIREMENTS.md` section 5.6 as optional shortcuts:
+  every README keeps the full `uv run ...` commands.
+- Both slide decks: an "Optional `make` shortcuts" slide, and `make
+  coverage` plus current test and coverage numbers on the quality-gates
+  slide.
 - `make typecheck`: runs `mypy` over `shared/`, `app.py`,
   `examples/enterprise_stack/`, and each `modules/NN_service/stack.py` on
   its own.
 
 ### Fixed
 
+- `examples/enterprise_stack/README.md` section 9 said "from the
+  repository root" but ran `cp ../../.env.example .env`; it's now
+  `cp .env.example .env`.
 - The documented type-check command (`uv run mypy shared modules app.py`,
   in `CONTRIBUTING.md` and both slide decks) never ran: mypy rejects
   `modules/01_iam/` and the other digit-prefixed directories as invalid

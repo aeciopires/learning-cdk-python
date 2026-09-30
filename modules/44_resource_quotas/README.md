@@ -58,30 +58,37 @@ for a quota.
 
 ## Tests
 
-**This module has no `tests/unit/test_44_...py` file, on purpose.** Every
-other module's "Tests" section points at a `aws_cdk.assertions.Template`
-built from a synthesized CDK stack (see
+**This module's test is different from every other module's.** Every other
+module's "Tests" section points at a `aws_cdk.assertions.Template` built
+from a synthesized CDK stack (see
 [`../../docs/TESTING.md`](../../docs/TESTING.md)) - but this module has no
 `stack.py` at all (see [Overview](#overview) and
 [Notes and cautions](#notes-and-cautions)), so there is no CloudFormation
-template to synthesize and nothing for `aws_cdk.assertions` to inspect.
-Writing a fake stack just to have something to unit-test would contradict
-this repository's own guardrail against inventing constructs (see
+template to synthesize. Writing a fake stack just to have something to
+unit-test would contradict this repository's own guardrail against
+inventing constructs (see
 [`../../CLAUDE.md`](../../CLAUDE.md#4-do-not-invent-things-the-core-guardrail)).
 
-What *can* be checked without deploying anything is `script.py` itself -
-that it is syntactically valid Python and passes this repository's lint
-rules:
+Instead, [`tests/unit/test_44_resource_quotas.py`](../../tests/unit/test_44_resource_quotas.py)
+tests `script.py` itself, with botocore's
+[`Stubber`](https://botocore.amazonaws.com/v1/documentation/api/latest/reference/stubber.html):
+each `boto3` call (`list_service_quotas`, including a second page,
+`get_service_quota`, `request_service_quota_increase`) gets a canned
+response, so nothing is sent to floci or to real AWS. It also checks that
+`main()` never calls `request_service_quota_increase` - the Stubber fails
+the test if an unexpected call is made. This covers 100% of `script.py`
+(see [`../../docs/TESTING.md`, "Test coverage"](../../docs/TESTING.md#test-coverage)).
 
 ```bash
 # From the repository root:
-uv run python -m py_compile modules/44_resource_quotas/script.py
+uv run pytest tests/unit/test_44_resource_quotas.py -v
 uv run ruff check modules/44_resource_quotas/script.py
 ```
 
-Neither command talks to floci or real AWS, and neither runs
-`list_service_quotas`/`get_service_quota` - see [Run the script](#run-the-script)
-below for actually exercising the `boto3` calls against floci.
+These tests prove the script calls the right API operations with the right
+parameters - not that floci or AWS answer them as expected. See
+[Run the script](#run-the-script) below for actually exercising the
+`boto3` calls against floci.
 
 ## Run the script
 

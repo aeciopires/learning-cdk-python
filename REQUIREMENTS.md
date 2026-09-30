@@ -16,6 +16,7 @@
     - [5.3 - The built-in floci-ui web console](#53---the-built-in-floci-ui-web-console)
     - [5.4 - Optional: the standalone floci-ui project (built from source)](#54---optional-the-standalone-floci-ui-project-built-from-source)
     - [5.5 - Optional: floci-dash, a second console](#55---optional-floci-dash-a-second-console)
+    - [5.6 - Optional: `make` shortcuts for floci and the CDK](#56---optional-make-shortcuts-for-floci-and-the-cdk)
   - [6. Network ports used](#6-network-ports-used)
   - [7. Tagging policy](#7-tagging-policy)
   - [8. Naming policy](#8-naming-policy)
@@ -435,10 +436,12 @@ the `make` command (pre-installed on Ubuntu and macOS, or `sudo apt-get
 install -y build-essential` / Xcode Command Line Tools if it's ever
 missing). It defines named **targets** - `make <target>` runs the shell
 commands listed under that target in the `Makefile`. This repository
-defines three: `help` (the default - just running `make` with no target
-shows this), `check` (covered here), and `typecheck` (runs `mypy` over
-`shared/`, `app.py`, every module's `stack.py`, and `examples/` - see
-[`CONTRIBUTING.md`](CONTRIBUTING.md)).
+defines `help` (the default - just running `make` with no target lists
+every target), `check` (covered here), `typecheck` (runs `mypy` - see
+[`CONTRIBUTING.md`](CONTRIBUTING.md)), `coverage` (runs every test with a
+coverage report - see [`docs/TESTING.md`, "Test coverage"](docs/TESTING.md#test-coverage)),
+and the `floci-*`/`cdk-*` shortcuts in
+[section 5.6](#56---optional-make-shortcuts-for-floci-and-the-cdk).
 
 **Run it:**
 
@@ -638,6 +641,42 @@ default `docker compose up -d floci`:
 ```bash
 docker compose --profile floci-ui --profile floci-dash up -d --build
 ```
+
+### 5.6 - Optional: `make` shortcuts for floci and the CDK
+
+**Learn the long form first.** Every module's README, and every section
+above, uses the full commands - `docker compose up -d floci`,
+`set -a; source .env; set +a`, `uv run cdk synth VpcStack`, ... - because
+knowing what each one does is part of what this path teaches. Once those
+feel familiar, the [`Makefile`](Makefile) targets below run the same
+commands for you (each one prints the command it runs), so you can move
+faster. They're a shortcut, not a replacement: nothing in this repository
+requires them.
+
+| Target | What it does | Long form it replaces |
+|---|---|---|
+| `make floci-status` | shows whether floci (and any console) is running, plus every URL | `docker compose ps` |
+| `make floci-start` | starts floci, if it isn't already healthy, and waits until it is | `docker compose up -d floci` |
+| `make floci-start UI=floci-dash` | same, plus the floci-dash console (section 5.5); `UI=floci-ui` for floci-ui (section 5.4, needs its clone), `UI="floci-ui floci-dash"` for both | `docker compose --profile floci-dash up -d` |
+| `make floci-stop` | stops floci and any console, keeping every deployed resource | `docker compose --profile floci-ui --profile floci-dash stop` |
+| `make floci-destroy` | removes floci, its consoles, **and every resource deployed to it** (`./.floci/`) - asks you to type `yes` first (`CONFIRM=yes` skips the question) | `docker compose ... down` + deleting `./.floci/` |
+| `make cdk-synth STACK=VpcStack` | synthesizes one module's stack (no `STACK` = every stack) | `uv run cdk synth VpcStack` |
+| `make cdk-synth EXAMPLE=enterprise ENV=stg` | synthesizes the [enterprise example](examples/enterprise_stack/README.md) for `dev`, `stg`, or `prd` | `ENTERPRISE_ENVIRONMENT=stg uv run cdk synth --app "uv run python examples/enterprise_stack/app.py"` |
+| `make cdk-deploy STACK=VpcStack` | bootstraps floci (if needed) and deploys one stack to it; `STACK=all` deploys every module, `EXAMPLE=enterprise ENV=...` the example | `uv run cdk bootstrap` + `uv run cdk deploy VpcStack --require-approval never` |
+
+Details worth knowing:
+
+- `cdk-synth` and `cdk-deploy` always run `floci-status` and then
+  `floci-start` first, so floci is up before any CDK command talks to it.
+- Both load your `.env` (or, if you haven't created one, `.env.example`)
+  exactly like step 6 of [section 0](#0-zero-to-your-first-deploy-in-order).
+- `cdk-deploy` **only deploys to floci**: it refuses to run if
+  `AWS_ENDPOINT_URL` isn't set in that file. To deploy to a real AWS
+  account, follow a module README's "Deploy to real AWS" section by hand.
+- There's no `cdk-destroy` shortcut on purpose - remove one stack with
+  `uv run cdk destroy <StackId>` (each module's "Clean up" section), or
+  everything at once with `make floci-destroy`.
+- Run `make` with no target to list every target and these examples.
 
 ## 6. Network ports used
 

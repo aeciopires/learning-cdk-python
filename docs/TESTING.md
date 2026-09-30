@@ -11,6 +11,13 @@
   - [Writing your own test, step by step](#writing-your-own-test-step-by-step)
   - [Common mistakes when you're new to this](#common-mistakes-when-youre-new-to-this)
   - [What these tests do *not* check](#what-these-tests-do-not-check)
+  - [Test coverage](#test-coverage)
+    - [What coverage measures, in plain words](#what-coverage-measures-in-plain-words)
+    - [Running it](#running-it)
+    - [Reading the report](#reading-the-report)
+    - [The rules: aim for 100%, never below 80%](#the-rules-aim-for-100-never-below-80)
+    - [Closing a coverage gap, step by step](#closing-a-coverage-gap-step-by-step)
+    - [What coverage does *not* tell you](#what-coverage-does-not-tell-you)
   - [Testing examples/enterprise_stack (a different shape of test)](#testing-examplesenterprise_stack-a-different-shape-of-test)
     - [Why it's a separate test suite](#why-its-a-separate-test-suite)
     - [Two kinds of test, and why both exist](#two-kinds-of-test-and-why-both-exist)
@@ -72,12 +79,18 @@ tests/
     ├── test_01_iam.py       # one file per module, same NN_service numbering
     ├── test_02_sts.py
     ├── test_03_vpc.py
-    └── ...                  # test_04_internet_gateway.py, ..., test_43_resource_group_tagging.py
+    ├── ...                  # test_04_internet_gateway.py, ..., test_43_resource_group_tagging.py
+    ├── test_44_resource_quotas.py  # module 44's boto3 script.py - see below
+    ├── test_app.py          # the root app.py: finds every module's stack
+    └── test_shared_*.py     # shared/config.py, naming.py, tagging.py
 ```
 
-`modules/44_resource_quotas` has no CDK stack (see its own README), so it
-has no `test_44_...py` file to synthesize - see its README for how that
-module is checked instead.
+`modules/44_resource_quotas` has no CDK stack (see its own README), so its
+test file is different: instead of a synthesized template, it tests
+`script.py`'s `boto3` calls with botocore's
+[`Stubber`](https://botocore.amazonaws.com/v1/documentation/api/latest/reference/stubber.html),
+which answers each AWS API call with a canned response - nothing is sent
+over the network, not even to floci.
 
 ## Reading your first test, line by line
 
@@ -237,6 +250,147 @@ behavior differences. Each module's README "Deploy with floci" section is
 how you check those - unit tests and an actual deploy answer different
 questions, and this repository uses both.
 
+## Test coverage
+
+### What coverage measures, in plain words
+
+A test suite can pass while large parts of the code never run at all - a
+test only proves something about the lines it actually executes.
+**Coverage** answers "which lines did my tests run?". While the tests run,
+the [`coverage.py`](https://coverage.readthedocs.io/) tool (used here
+through the [`pytest-cov`](https://pytest-cov.readthedocs.io/) plugin)
+records every line Python executes; afterwards it compares that to every
+line in the code and reports the percentage that ran.
+
+This repository also measures **branch coverage**: an `if` only counts as
+fully covered when *both* its "true" and "false" paths ran. For example,
+in `shared/tagging.py`:
+
+```python
+if tags.cell_based and tags.cell_id:
+    Tags.of(scope).add("cell-id", tags.cell_id)
+```
+
+every module's test runs this `if` - but with the shared `config` fixture,
+which is never cell-based, the line inside it never runs. Line coverage
+would miss that half; branch coverage flags it, and
+`tests/unit/test_shared_tagging.py` exists to cover it.
+
+### Running it
+
+```bash
+make coverage                          # both test suites + report; fails below 80%
+make coverage SKIP_COVERAGE_CHECK=1    # same report, but never fails on the minimum
+```
+
+`make coverage` is a shortcut for this command, which you can also run
+directly (see the [`Makefile`](../Makefile)):
+
+```bash
+uv run pytest tests examples/enterprise_stack/tests --cov --cov-report=term-missing --cov-report=html
+```
+
+- `tests examples/enterprise_stack/tests` runs **both** test suites in one
+  go (the second one normally runs separately - see
+  [Why it's a separate test suite](#why-its-a-separate-test-suite)), so one
+  report covers the whole repository.
+- `--cov` turns coverage on; *what* is measured, and the 80% minimum, come
+  from the `[tool.coverage.*]` sections of
+  [`pyproject.toml`](../pyproject.toml).
+- `--cov-report=term-missing` prints the table below;
+  `--cov-report=html` also writes a browsable report to `htmlcov/` - open
+  `htmlcov/index.html` and click a file to see every line highlighted green
+  (ran), red (never ran), or yellow (a branch that only went one way).
+
+`SKIP_COVERAGE_CHECK=1` is for work in progress - for example, while you're
+still writing the tests for a new module. The report still prints; only the
+"fail below 80%" check is switched off. A finished change must pass
+`make coverage` **without** it.
+
+### Reading the report
+
+```
+Name                        Stmts   Miss Branch BrPart  Cover   Missing
+-----------------------------------------------------------------------
+modules/03_vpc/stack.py        33      0      0      0   100%
+shared/config.py               33      5      4      0    81%   65-69
+-----------------------------------------------------------------------
+TOTAL                        1413      5     50      0    99%
+Required test coverage of 80.0% reached. Total coverage: 99.00%
+```
+
+| Column | Meaning |
+|---|---|
+| `Stmts` | lines of code that can run (comments and blank lines don't count) |
+| `Miss` | of those, lines no test ran |
+| `Branch` | number of possible paths out of `if`/`for`/`while` statements |
+| `BrPart` | branches where only one of the paths ever ran |
+| `Cover` | the percentage covered, lines and branches combined |
+| `Missing` | exactly which lines (`65-69`) or branches (`44->46`, "line 44 never jumped to line 46") to write a test for |
+
+The last line is the verdict: the total is compared to the minimum, and
+`make coverage` exits with an error if it's lower.
+
+### The rules: aim for 100%, never below 80%
+
+- **The goal is 100%** for every module's `stack.py`, `shared/`, the root
+  `app.py`, `modules/44_resource_quotas/script.py`, and
+  `examples/enterprise_stack/` - and today, every one of them is at 100%.
+- **The minimum accepted is 80%** of the whole repository - set as
+  `fail_under = 80` in `pyproject.toml`, so `make coverage` fails below it.
+  Anything between 80% and 100% needs a reason, not just a shrug: some code
+  genuinely can't run in a unit test.
+- **"Genuinely can't run" is a short, explicit list** in `pyproject.toml`'s
+  `exclude_also`: the `if __name__ == "__main__":` line (only runs when a
+  file is executed as a script, never when a test imports it) and
+  `raise NotImplementedError` (the body of an abstract method, which is
+  never called by design). Code that *could* be tested but isn't yet is not
+  on this list - it's a gap to close, not to exclude.
+
+A module's `stack.py` usually reaches 100% for free - building the stack
+runs every line - so for modules, coverage mostly catches `if`/`else`
+branches nobody exercised. What your test *asserts* still matters more; see
+[What coverage does *not* tell you](#what-coverage-does-not-tell-you).
+
+### Closing a coverage gap, step by step
+
+1. Run `make coverage` and find the file in the `Missing` column (or open
+   `htmlcov/index.html` and look for red and yellow lines).
+2. Open that file at those line numbers and ask: *what input would make
+   this line run?* Usually it's a value your tests never use - a
+   cell-based config, an environment variable that's set, an error case.
+3. Write a test that provides exactly that input, in the matching test file
+   (`tests/unit/test_NN_service.py` for a module, `test_shared_*.py` for
+   `shared/`, `examples/enterprise_stack/tests/` for the example). Make it
+   assert on the result - not just run the code.
+4. Run `make coverage` again and confirm the lines disappeared from
+   `Missing`.
+5. Break the code on purpose (change a value, comment out the line) and
+   confirm your new test fails - then undo it. A test that passes no matter
+   what adds coverage without adding any protection.
+
+Some patterns used in this repository's tests, for code that doesn't fit
+the usual "synthesize a stack" shape:
+
+| Code to cover | Technique | Example |
+|---|---|---|
+| Behavior driven by environment variables | pytest's `monkeypatch.setenv()`/`delenv()` (undone after each test) | `tests/unit/test_shared_config.py` |
+| An error that should be raised | `with pytest.raises(ValueError, match="..."):` | `tests/unit/test_shared_tagging.py` |
+| A whole CDK app (`app.py`) | call `main()` with `cdk.App` pointed at a temporary folder, then read the stacks back with `cx_api.CloudAssembly` | `tests/unit/test_app.py` |
+| `boto3` calls | botocore's `Stubber`: canned responses, no network | `tests/unit/test_44_resource_quotas.py` |
+| Printed output | pytest's `capsys` fixture | `tests/unit/test_44_resource_quotas.py` |
+
+### What coverage does *not* tell you
+
+100% coverage means every line *ran* during a test - not that every line
+was *checked*. A test that builds a stack and asserts nothing reaches the
+same coverage as one that checks every property. Coverage finds code no
+test touches; it can't tell you whether your assertions are the right ones.
+That's why every module's test still asserts its mandatory tags and its
+one or two most important resource facts (see
+[Writing your own test, step by step](#writing-your-own-test-step-by-step)),
+and why step 5 above matters.
+
 ## Testing examples/enterprise_stack (a different shape of test)
 
 [`examples/enterprise_stack/`](../examples/enterprise_stack/README.md) - the
@@ -336,6 +490,8 @@ Write its test the same way `test_ecs_ecr_load_balancing.py` tests `ecr`:
 - [AWS CDK v2 Developer Guide - Testing constructs](https://docs.aws.amazon.com/cdk/v2/guide/testing.html)
 - [AWS CDK API Reference (Python) - `aws_cdk.assertions`](https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.assertions/)
 - [pytest documentation - fixtures](https://docs.pytest.org/en/stable/how-to/fixtures.html)
+- [coverage.py documentation](https://coverage.readthedocs.io/) · [pytest-cov documentation](https://pytest-cov.readthedocs.io/)
+- [botocore - Stubber reference](https://botocore.amazonaws.com/v1/documentation/api/latest/reference/stubber.html)
 - [`examples/enterprise_stack/README.md`](../examples/enterprise_stack/README.md) -
   what the example is, and section 2 for the SOLID principles its
   testability rests on.

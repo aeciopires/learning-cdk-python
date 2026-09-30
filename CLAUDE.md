@@ -63,7 +63,7 @@ whenever one is edited.
 ├── app.py                  # discovers and instantiates every module's stack - see section 3
 ├── docker-compose.yml      # floci (local AWS emulator + floci-ui/floci-dash consoles)
 ├── .env.example             # every CDK_*/AWS_* variable a module reads, with comments
-├── Makefile                 # `make check` (scripts/check-deps.sh, REQUIREMENTS.md section 3.4) and `make typecheck` (mypy)
+├── Makefile                 # optional shortcuts: check, typecheck, coverage, floci-*, cdk-synth/cdk-deploy - REQUIREMENTS.md sections 3.4 and 5.6
 ├── scripts/
 │   └── check-deps.sh          # what `make check` runs - OS + every tool in REQUIREMENTS.md section 3
 ├── shared/                  # tagging.py, naming.py, config.py - see section 5 and 6
@@ -89,7 +89,9 @@ whenever one is edited.
     ├── conftest.py            # the shared `config` pytest fixture
     ├── _helpers.py             # stack_class() / mandatory_tag_pairs() - see docs/TESTING.md
     └── unit/
-        └── test_NN_service.py  # one per module with a stack.py - mandatory, see section 3 point 7
+        ├── test_NN_service.py  # one per module (44: tests script.py) - mandatory, see section 3 point 7
+        ├── test_app.py          # the root app.py's module discovery
+        └── test_shared_*.py     # shared/config.py, naming.py, tagging.py
 ```
 
 See [`docs/LEARNING-PATH.md`](docs/LEARNING-PATH.md) for the full list of
@@ -140,12 +142,25 @@ for why it is not a 45th module.
    are present (`mandatory_tag_pairs()`) and the module's one or two most
    important resource-level facts (a count, a key property) - not every
    property of every resource.
+8. **Test coverage: aim for 100%, never below 80%.** `make coverage` runs
+   both test suites (`tests/` and `examples/enterprise_stack/tests/`) with
+   branch coverage and fails if the repository total drops below 80%
+   (`fail_under` in `pyproject.toml`). Every module's `stack.py`, `shared/`,
+   the root `app.py`, `modules/44_resource_quotas/script.py`, and
+   `examples/enterprise_stack/` are at 100% today - a change that adds or
+   changes code adds the tests that keep its own lines and branches at
+   100%. The only accepted exclusions are the `exclude_also` patterns in
+   `pyproject.toml` (the `if __name__ == "__main__":` guard, `raise
+   NotImplementedError` in abstract methods); don't add new ones, and don't
+   add `# pragma: no cover` to code that a test could reach. See
+   [`docs/TESTING.md`, "Test coverage"](docs/TESTING.md#test-coverage).
 
 A module with **no deployable CDK resource** (there is exactly one: `44_resource_quotas`
 - Service Quotas has no CloudFormation resource type at all) has no
-`stack.py`; `app.py` skips any `modules/*/` directory that lacks one, and
-it has no `tests/unit/test_44_...py` either - see that module's README for
-how it's checked instead. Do not invent a fake CDK construct to avoid this
+`stack.py`; `app.py` skips any `modules/*/` directory that lacks one.
+Its `tests/unit/test_44_resource_quotas.py` tests its `boto3` `script.py`
+with botocore's `Stubber` (canned responses, no network) instead of a
+synthesized template - see that module's README. Do not invent a fake CDK construct to avoid this
 - document the gap instead (see [section 4](#4-do-not-invent-things-the-core-guardrail))
 and, if a `boto3`/AWS CLI example is the only honest way to show the
 service, put it in that module's README and an optional `script.py`.
@@ -304,9 +319,16 @@ renamed, or removed, re-check every anchor link in that file.
    the module done, not after, and confirm it actually fails if you break
    the thing it's testing (comment out a property, change a value) - a
    test that can't fail isn't testing anything.
-6. **Update `docs/LEARNING-PATH.md`** if you added, renamed, or
+6. **Check coverage**: `make coverage` must pass, and the files you touched
+   must show no `Missing` lines or partial branches - see point 8 of
+   [section 3](#3-the-module-contract). The same applies to
+   `examples/enterprise_stack/`: a new builder gets its tests (see
+   `examples/enterprise_stack/tests/test_builders.py`) in the same change.
+   `make coverage SKIP_COVERAGE_CHECK=1` reports without enforcing the 80%
+   minimum - fine while writing tests, never for a finished change.
+7. **Update `docs/LEARNING-PATH.md`** if you added, renamed, or
    reordered a module.
-7. **Git:** default branch is `main`; do not commit or push without an
+8. **Git:** default branch is `main`; do not commit or push without an
    explicit request from whoever you're working with.
 
 ## 11. What not to do
@@ -320,6 +342,12 @@ renamed, or removed, re-check every anchor link in that file.
   structure in `modules/03_vpc/README.md`.
 - Don't skip a module's unit test, and don't write one that can't fail
   (see point 5 of [section 10](#10-workflow-when-adding-or-changing-a-module)).
+- Don't let `make coverage` drop below 80%, or leave code you added
+  uncovered when a test could reach it (see point 8 of [section 3](#3-the-module-contract)).
+- Don't replace a documented `uv run ...`/`docker compose ...` command with
+  a `make` target in any README or guide - the `make` targets are optional
+  shortcuts for learners who already know the long form, mentioned
+  *alongside* it (see [`REQUIREMENTS.md`, section 5.6](REQUIREMENTS.md#56---optional-make-shortcuts-for-floci-and-the-cdk)).
 - Don't leave a broken anchor link or a stale TOC after editing headings.
 - Don't commit or push without being explicitly asked to.
 

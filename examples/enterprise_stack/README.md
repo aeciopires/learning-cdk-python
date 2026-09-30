@@ -509,10 +509,15 @@ uv run cdk synth --app "uv run python examples/enterprise_stack/app.py"
 
 # against floci (see ../../REQUIREMENTS.md section 5), same as any module:
 docker compose up -d floci
-cp ../../.env.example .env; set -a; source .env; set +a   # or export the 4 AWS_* vars by hand
+cp .env.example .env; set -a; source .env; set +a   # or export the 4 AWS_* vars by hand
 uv run cdk deploy --all --app "uv run python examples/enterprise_stack/app.py" --require-approval never
 uv run cdk destroy --all --app "uv run python examples/enterprise_stack/app.py"
 ```
+
+Once these commands are familiar, `make cdk-synth EXAMPLE=enterprise
+ENV=stg` and `make cdk-deploy EXAMPLE=enterprise ENV=stg` are optional
+shortcuts for them (they also start floci first, if it isn't running) - see
+[`../../REQUIREMENTS.md`, section 5.6](../../REQUIREMENTS.md#56---optional-make-shortcuts-for-floci-and-the-cdk).
 
 `dev` and `stg` synthesize cleanly with no AWS credentials at all
 (environment-agnostic, exactly like every `modules/NN_service` stack -
@@ -535,6 +540,12 @@ exists) - run them explicitly:
 uv run pytest examples/enterprise_stack/tests/ -v
 ```
 
+`make coverage` runs these together with the repository's own tests and
+reports coverage for both (this example is at 100%) - see
+[`../../docs/TESTING.md`, "Test coverage"](../../docs/TESTING.md#test-coverage).
+Keep it that way: every new builder or code path gets a test in the same
+change.
+
 `test_registry.py` tests the precedence/validation engine with fake
 builders - no CDK, no AWS, no Docker, runs in milliseconds, the same
 "fast and dependency-free" philosophy as
@@ -550,6 +561,13 @@ matching `EcsResourceBuilder`'s `MIN_TASK_COUNT`/`MAX_TASK_COUNT`/
 `TARGET_CPU_UTILIZATION_PERCENT` constants, and the ECS service's own
 `LoadBalancers` property listing both the ALB's and the NLB's target
 groups when both are enabled (or just one, when only one is).
+`test_builders.py` enables each remaining builder (`kms`, `dynamodb`,
+`sns`, `acm`, `ec2`) on its own and checks its key resource and its
+product-environment-cell name; `test_environment_config.py` checks that
+`environments/{dev,stg,prd}.json` load into the documented cells, plus the
+account/region fallback; and `test_app.py` checks `app.py` itself - one
+stack per cell, the selected `ENTERPRISE_ENVIRONMENT` driving names and
+tags, and a long name like `staging` being rejected.
 
 ## 11. Extending it: adding resource #15
 

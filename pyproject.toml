@@ -17,6 +17,7 @@ dev = [
     "pytest>=8.0.0",
     "mypy>=1.14.0",
     "ruff>=0.9.0",
+    "pytest-cov>=7.1.0",
 ]
 
 [tool.ruff]
@@ -25,6 +26,27 @@ target-version = "py314"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+# Test coverage (`make coverage`) - see docs/TESTING.md, "Test coverage".
+[tool.coverage.run]
+# Branch coverage: an `if` counts as covered only when both its "true" and
+# "false" paths have run, not just its first line.
+branch = true
+source = ["app", "shared", "modules", "examples"]
+omit = ["*/tests/*", "tests/*"]
+
+[tool.coverage.report]
+# The minimum accepted total - `make coverage` fails below it. The goal is
+# 100% wherever possible; see docs/TESTING.md for what counts as "not possible".
+fail_under = 80
+show_missing = true
+skip_covered = false
+# Lines that can never run under a test runner, excluded on purpose (each
+# is a regular expression matched against a source line).
+exclude_also = [
+    'if __name__ == .__main__.:',   # only runs as `python file.py`, never on import
+    'raise NotImplementedError',     # the body of an abstract method
+]
 
 [build-system]
 requires = ["hatchling"]
