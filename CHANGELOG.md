@@ -1,6 +1,8 @@
 <!-- TOC -->
 
 - [Changelog](#changelog)
+  - [\[Unreleased\]](#unreleased)
+    - [Changed](#changed)
   - [\[0.1.0 \] - 2026-10-29](#010----2026-10-29)
     - [Added](#added)
     - [Fixed](#fixed)
@@ -12,6 +14,17 @@
 All notable changes to this project are documented in this file. The format
 loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 written in English by convention.
+
+## [Unreleased]
+
+### Changed
+
+- The AWS CLI v2 is now installed and managed by mise: `mise.toml` pins
+  `aws-cli = "2"` next to `python`, so `mise install` sets up both.
+  `REQUIREMENTS.md` sections 3.1-3.3 drop the manual `.zip`
+  installer/`brew install awscli` steps (kept as a no-mise fallback in
+  section 3.3, now titled "Managing Python and the AWS CLI with mise"), and
+  `make check` points to `mise install` when `aws` is missing.
 
 ## [0.1.0 ] - 2026-10-29
 

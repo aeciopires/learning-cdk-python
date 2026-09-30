@@ -7,7 +7,7 @@
   - [3. Required software](#3-required-software)
     - [3.1 - Install on Ubuntu (amd64)](#31---install-on-ubuntu-amd64)
     - [3.2 - Install on macOS (arm64 and amd64)](#32---install-on-macos-arm64-and-amd64)
-    - [3.3 - Managing the Python version with mise](#33---managing-the-python-version-with-mise)
+    - [3.3 - Managing Python and the AWS CLI with mise](#33---managing-python-and-the-aws-cli-with-mise)
     - [3.4 - Running and reading `make check`](#34---running-and-reading-make-check)
   - [4. Project setup (uv)](#4-project-setup-uv)
   - [5. Running floci (the local AWS emulator)](#5-running-floci-the-local-aws-emulator)
@@ -171,12 +171,12 @@ go, and tells you exactly what to install.
 |---|---|---|---|
 | Python | 3.10+ | yes | `aws-cdk-lib` 2.271.0 requires Python >= 3.10 (see [PyPI](https://pypi.org/project/aws-cdk-lib/)) |
 | [uv](https://docs.astral.sh/uv/) | latest | yes | Python package/venv manager used by every module - see [section 4](#4-project-setup-uv) |
-| [mise](https://mise.jdx.dev) | latest | recommended | installs the exact Python version this repository pins (`.python-version`, `mise.toml`) - see [section 3.3](#33---managing-the-python-version-with-mise) |
+| [mise](https://mise.jdx.dev) | latest | recommended | installs the exact Python and AWS CLI versions this repository pins (`mise.toml`, `.python-version`) - see [section 3.3](#33---managing-python-and-the-aws-cli-with-mise) |
 | Node.js | 20 LTS+ | yes | the AWS CDK Toolkit (`aws-cdk`, the `cdk` CLI) is distributed as an npm package |
 | AWS CDK Toolkit (`cdk`) | v2, matching `aws-cdk-lib`'s major version | yes | `cdk synth` / `cdk deploy` / `cdk destroy` - install with `npm install -g aws-cdk` or run on demand with `npx aws-cdk@2` |
 | Docker Engine / Docker Desktop, or [Colima](https://github.com/abiosoft/colima) (macOS alternative - section 3.2) | 24+ | yes | runs floci (and, for some modules, floci's "real Docker" backends) |
 | Docker Compose v2 (`docker compose`) | 2.20+ | yes | brings up `docker-compose.yml` |
-| AWS CLI | v2 | recommended | used in every module's "Verify" section, pointed at floci or at a real account |
+| AWS CLI | v2 | recommended | used in every module's "Verify" section, pointed at floci or at a real account - installed by `mise install` (pinned in `mise.toml`), see [section 3.3](#33---managing-python-and-the-aws-cli-with-mise) |
 | git | 2.x | yes | - |
 | floci CLI | latest | optional | an alternative to `docker compose` for running floci - see [section 5.2](#52---option-b-floci-cli) |
 | [Marp CLI](https://github.com/marp-team/marp-cli) (`@marp-team/marp-cli`) | latest | optional | render/export `docs/slides/SLIDES-*.md` to HTML/PDF/PPTX - see [section 11](#11-building-rendering-and-exporting-the-slide-decks-marp) |
@@ -202,10 +202,11 @@ sudo apt-get update && sudo apt-get install -y git
 # uv (installs into ~/.local/bin)
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# mise (optional but recommended - installs into ~/.local/bin; see section 3.3)
+# mise (recommended - installs into ~/.local/bin; see section 3.3)
 curl https://mise.run | sh
-echo 'eval "$(~/.local/bin/mise activate bash)"' >> ~/.bashrc
-# open a new terminal, then, from this repository's root:
+echo 'eval "$(~/.local/bin/mise activate bash)"' >> ~/.bashrc   # Bash; Zsh/Fish/others: section 3.3
+# open a new terminal, then, from this repository's root - installs
+# Python and the AWS CLI v2 pinned in mise.toml:
 mise trust && mise install
 
 # Node.js (LTS) - see https://nodejs.org/en/download for other options
@@ -214,10 +215,6 @@ sudo apt-get install -y nodejs
 
 # AWS CDK Toolkit
 npm install -g aws-cdk
-
-# AWS CLI v2 - see https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
-curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-unzip awscliv2.zip && sudo ./aws/install
 
 # floci CLI (optional - see section 5.2)
 curl -fsSL https://floci.io/install.sh | sh
@@ -230,15 +227,16 @@ curl -fsSL https://floci.io/install.sh | sh
 #   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
 brew install --cask docker      # Docker Desktop - open the app at least once
-brew install uv mise node awscli git
-echo 'eval "$(mise activate zsh)"' >> ~/.zshrc   # or ~/.bash_profile for bash
+brew install uv mise node git
+echo 'eval "$(mise activate zsh)"' >> ~/.zshrc   # Zsh (macOS default); other shells: section 3.3
 npm install -g aws-cdk
 brew install floci-io/floci/floci-cli   # optional - see section 5.2
 ```
 
 Open a new terminal (so the `mise activate` line above takes effect), then, from
-this repository's root: `mise trust && mise install` - see
-[section 3.3](#33---managing-the-python-version-with-mise) for what this does.
+this repository's root: `mise trust && mise install` (installs Python and
+the AWS CLI v2 pinned in `mise.toml`) - see
+[section 3.3](#33---managing-python-and-the-aws-cli-with-mise) for what this does.
 
 **Docker Desktop alternative: [Colima](https://github.com/abiosoft/colima).**
 Anywhere this document or a module's README says `docker compose ...` or
@@ -273,7 +271,7 @@ Everything else in this document (`docker compose up -d floci`, the
 `/var/run/docker.sock` mount in `docker-compose.yml`, etc.) is unaffected by
 which of the two you use - both present the same Docker API.
 
-### 3.3 - Managing the Python version with mise
+### 3.3 - Managing Python and the AWS CLI with mise
 
 **New to version managers? Here's the problem one solves.** Your computer
 probably already has a Python installed - but is it Python 3.10 or later
@@ -289,37 +287,84 @@ based on which directory you're in.
 [mise](https://mise.jdx.dev) is one such version manager (in the same
 family as tools like `pyenv`, `nvm`, or `rbenv` - the difference is that
 mise handles many languages/tools through one CLI and one config file
-format, instead of one tool per language). This repository declares its
-Python version in [`mise.toml`](mise.toml):
+format, instead of one tool per language). This repository declares two
+tools in [`mise.toml`](mise.toml):
 
 ```toml
 [tools]
 python = "3.12"
+aws-cli = "2"
 ```
 
-(the same version pinned in [`.python-version`](.python-version), which
-`uv` also reads - see [section 4](#4-project-setup-uv)). Once mise is
-installed and shell-activated (section 3.1/3.2 above), two commands set
-everything up:
+- `python` - the same version pinned in [`.python-version`](.python-version),
+  which `uv` also reads - see [section 4](#4-project-setup-uv).
+- `aws-cli` - the AWS CLI v2 (the `aws` command every module's "Verify"
+  section uses). mise downloads it from the official
+  [aws/aws-cli](https://github.com/aws/aws-cli) releases (its registry
+  backend is `aqua:aws/aws-cli`); `"2"` means "the latest 2.x release",
+  so no `sudo`, no `.zip` installer, and no system-wide `/usr/local/bin/aws`
+  is involved. Pin a full version instead (e.g. `aws-cli = "2.37.6"`) if you
+  need an exact, reproducible build - run `mise ls-remote aws-cli` to see
+  the current releases first, since they change often.
+
+**Activate mise in your shell (once per machine).** mise only switches
+tools automatically as you `cd` into this repository if your shell runs
+`mise activate` at startup. Add the line matching your shell, once, to that
+shell's interactive startup file, then open a new terminal (commands from
+the official [`mise activate` reference](https://mise.jdx.dev/cli/activate.html)):
+
+| Shell | Startup file | Line to add |
+|---|---|---|
+| Bash | `~/.bashrc` | `eval "$(mise activate bash)"` |
+| Zsh | `~/.zshrc` | `eval "$(mise activate zsh)"` |
+| Fish | `~/.config/fish/config.fish` | `mise activate fish \| source` |
+| Xonsh | your Xonsh startup file | `execx($(mise activate xonsh))` |
+| PowerShell | `$PROFILE` | `(&mise activate pwsh) \| Out-String \| Invoke-Expression` |
+
+Not sure which shell you're using? Run `echo $SHELL` (Bash/Zsh/Fish on
+Ubuntu and macOS). Or append the line from a terminal, for example:
+
+```bash
+echo 'eval "$(mise activate bash)"' >> ~/.bashrc                  # Bash
+echo 'eval "$(mise activate zsh)"' >> ~/.zshrc                    # Zsh
+echo 'mise activate fish | source' >> ~/.config/fish/config.fish  # Fish
+```
+
+The `mise` executable must already be on your `PATH` when that line runs.
+If it isn't (for example, right after the `curl https://mise.run | sh`
+install in section 3.1, which puts it in `~/.local/bin`), use its absolute
+path instead, e.g. `eval "$(~/.local/bin/mise activate bash)"`. mise
+supports `elvish` and `nu` too - see the
+[shell activation guide](https://mise.jdx.dev/getting-started.html) for
+those. In scripts or CI, where there's no interactive shell to activate,
+skip activation and use `mise exec -- aws ...` instead.
+
+Once mise is installed and activated, two commands set everything up:
 
 ```bash
 mise trust      # you're telling mise "I trust the mise.toml in this specific
                  # folder to run its declared tools" - a one-time confirmation
                  # per project, a safety measure since a malicious mise.toml
                  # could otherwise run arbitrary install scripts
-mise install    # downloads and installs exactly Python 3.12 (if you don't
-                 # already have that exact version via mise) into
-                 # ~/.local/share/mise/ - it never touches or overwrites
-                 # any Python your system already has installed elsewhere
+mise install    # downloads and installs exactly Python 3.12 and the AWS
+                 # CLI v2 (if you don't already have those versions via
+                 # mise) into ~/.local/share/mise/ - it never touches or
+                 # overwrites any Python or `aws` your system already has
+                 # installed elsewhere
 ```
 
 After that, simply being in this repository's directory (with mise's shell
-activation from section 3.1/3.2 in place) puts that exact Python version
-first on your `PATH` - `cd` out to any other project and it's gone again,
+activation from section 3.1/3.2 in place) puts those exact Python and
+AWS CLI versions first on your `PATH` - `cd` out to any other project and it's gone again,
 replaced by whatever *that* project needs (or your system default, if none
 is declared). Run `mise ls` at any time to see every tool/version mise has
-installed, and `python --version` inside this repository's folder to
-confirm you're on 3.12.
+installed, and `python --version` / `aws --version` inside this
+repository's folder to confirm you're on Python 3.12 and `aws-cli/2.x`.
+
+To move to a newer AWS CLI later, `mise upgrade aws-cli` (with `aws-cli =
+"2"`, this picks up the newest 2.x release), or edit the version in
+`mise.toml` and run `mise install` again. Without shell activation,
+`mise exec -- aws --version` runs the same pinned binary.
 
 **Is mise required?** No - it's marked "recommended" in the table above,
 not "yes". `uv` (section 4) is capable of downloading and managing its own
@@ -332,6 +377,18 @@ several repositories (this GitHub account's other repositories already use
 here too; (2) pinning the interpreter itself, not just the packages
 installed into it, is one less variable to debug if something behaves
 differently on your machine than someone else's.
+
+**Skipping mise? Install the AWS CLI yourself.** Without mise, nothing else
+in this repository installs the `aws` command, so use the
+[official AWS CLI v2 installer](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
+instead - on Ubuntu (amd64):
+
+```bash
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+unzip awscliv2.zip && sudo ./aws/install
+```
+
+or, on macOS, `brew install awscli`.
 
 ### 3.4 - Running and reading `make check`
 
@@ -398,7 +455,7 @@ and locked in `uv.lock` (created by the command below). See
 and [Working with the AWS CDK in Python](https://docs.aws.amazon.com/cdk/v2/guide/work-with-cdk-python.html)
 for the concepts this setup is based on. `uv sync` reads
 [`.python-version`](.python-version) to pick the interpreter it builds
-`.venv/` with - if you set up mise ([section 3.3](#33---managing-the-python-version-with-mise)),
+`.venv/` with - if you set up mise ([section 3.3](#33---managing-python-and-the-aws-cli-with-mise)),
 that's the same Python version mise installs, already on your `PATH`; if
 you skipped mise, uv downloads a matching Python version on its own, so
 either way works.
@@ -725,7 +782,7 @@ unaffected - this only matters for **live preview**:
 - [Marp CLI](https://github.com/marp-team/marp-cli) · [Marp for VS Code](https://marketplace.visualstudio.com/items?itemName=marp-team.marp-vscode) · [marp.app](https://marp.app) · [Marpit - `html` and other Markdown directives](https://marpit.marp.app/directives)
 - [Puppeteer - Troubleshooting (headless Chromium system dependencies on Linux)](https://pptr.dev/troubleshooting)
 - [uv - Getting started](https://docs.astral.sh/uv/getting-started/installation/)
-- [mise - Getting started](https://mise.jdx.dev/getting-started.html) · [mise - Installing mise](https://mise.jdx.dev/installing-mise.html)
+- [mise - Getting started](https://mise.jdx.dev/getting-started.html) · [mise - Installing mise](https://mise.jdx.dev/installing-mise.html) · [mise - Registry](https://mise.jdx.dev/registry.html) (the `aws-cli` tool) · [aws/aws-cli releases](https://github.com/aws/aws-cli)
 - [AWS CDK v2 Developer Guide - Working with the AWS CDK in Python](https://docs.aws.amazon.com/cdk/v2/guide/work-with-cdk-python.html)
 - [AWS CDK v2 Developer Guide - Environments](https://docs.aws.amazon.com/cdk/v2/guide/environments.html)
 - [AWS CDK v2 Developer Guide (home)](https://docs.aws.amazon.com/cdk/v2/guide/home.html)

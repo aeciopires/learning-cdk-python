@@ -1,7 +1,15 @@
-# Pins the exact Python version this repository is tested with, so `mise
+# Pins the exact tool versions this repository is tested with, so `mise
 # install` (optional but recommended - see REQUIREMENTS.md section 3.3)
-# installs it the same way on every machine. Kept in sync with
-# .python-version, which `uv` reads for the same purpose - see
-# REQUIREMENTS.md section 4.
+# installs them the same way on every machine.
+#
+# - python: kept in sync with .python-version, which `uv` reads for the
+#   same purpose - see REQUIREMENTS.md section 4.
+# - aws-cli: the AWS CLI v2 (`aws` binary), used in every module's
+#   "Verify" section. mise installs it from the official aws/aws-cli
+#   release (registry backend `aqua:aws/aws-cli`); "2" means "the latest
+#   2.x release" - pin a full version (e.g. "2.37.6") for a fully
+#   reproducible install. Re-check the current releases with
+#   `mise ls-remote aws-cli` before pinning.
 [tools]
 python = "3.12"
+aws-cli = "2"

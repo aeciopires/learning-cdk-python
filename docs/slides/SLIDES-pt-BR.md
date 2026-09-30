@@ -401,7 +401,7 @@ As ferramentas exatas sobre as quais este repositório roda, do empacotamento Py
 | `constructs`, `boto3` | Biblioteca base de constructs do CDK; SDK da AWS para Python (usado por alguns scripts de módulo) |
 | [floci](https://floci.io) (Docker) | Emulador de AWS local e gratuito — todo módulo é implantado aqui primeiro |
 | Docker + Docker Compose v2 | Executa o floci e seus consoles opcionais (`docker-compose.yml`) |
-| [mise](https://mise.jdx.dev) (opcional) | Fixa/instala a versão exata do Python (`.python-version` / `mise.toml`) |
+| [mise](https://mise.jdx.dev) (opcional) | Fixa/instala a versão exata do Python e a AWS CLI v2 (`mise.toml` / `.python-version`) |
 | `pytest`, `mypy`, `ruff` | Testes unitários (`aws_cdk.assertions`), checagem de tipos e lint |
 | Node.js + npm | Executa o AWS CDK Toolkit (CLI `cdk`) e, opcionalmente, as CLIs de Mermaid/Marp |
 
@@ -734,7 +734,7 @@ De um clone recém-feito até o seu primeiro `cdk deploy`, e um exemplo prático
 | uv | gerenciador de pacotes/venv Python |
 | Node.js + npm | roda o AWS CDK Toolkit (CLI `cdk`) |
 | Docker + Docker Compose v2 | roda o floci e seus consoles opcionais |
-| AWS CLI v2, `make`, `git` | inspeção manual do floci; orquestração |
+| AWS CLI v2 (via mise), `make`, `git` | inspeção manual do floci; orquestração |
 
 Suportado: Ubuntu 22.04+ (`amd64`) e macOS 13+ (`arm64`/`amd64`). Windows: use WSL2. Lista completa: [`REQUIREMENTS.md`](../../REQUIREMENTS.md).
 

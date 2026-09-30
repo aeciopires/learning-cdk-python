@@ -401,7 +401,7 @@ That's the whole idea: `modules/03_vpc/stack.py` is Python code; `cdk synth` tur
 | `constructs`, `boto3` | CDK's construct base library; AWS SDK for Python (used by a few module scripts) |
 | [floci](https://floci.io) (Docker) | Free, local AWS emulator — every module deploys here first |
 | Docker + Docker Compose v2 | Runs floci and its optional consoles (`docker-compose.yml`) |
-| [mise](https://mise.jdx.dev) (optional) | Pins/installs the exact Python version (`.python-version` / `mise.toml`) |
+| [mise](https://mise.jdx.dev) (optional) | Pins/installs the exact Python version and the AWS CLI v2 (`mise.toml` / `.python-version`) |
 | `pytest`, `mypy`, `ruff` | Unit tests (`aws_cdk.assertions`), type checks, and linting |
 | Node.js + npm | Runs the AWS CDK Toolkit (`cdk` CLI) and, optionally, Mermaid/Marp CLIs |
 
@@ -733,7 +733,7 @@ From a fresh clone to your first `cdk deploy`, and a worked example.
 | uv | Python package/venv manager |
 | Node.js + npm | runs the AWS CDK Toolkit (`cdk` CLI) |
 | Docker + Docker Compose v2 | runs floci and its optional consoles |
-| AWS CLI v2, `make`, `git` | manual inspection of floci; orchestration |
+| AWS CLI v2 (via mise), `make`, `git` | manual inspection of floci; orchestration |
 
 Supported: Ubuntu 22.04+ (`amd64`) and macOS 13+ (`arm64`/`amd64`). Windows: use WSL2. Full list: [`REQUIREMENTS.md`](../../REQUIREMENTS.md).
 

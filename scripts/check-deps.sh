@@ -159,7 +159,7 @@ check_uv() {
 
 check_mise() {
   if ! command -v mise >/dev/null 2>&1; then
-    warn "mise not found (recommended, not required - uv can manage Python on its own). See REQUIREMENTS.md section 3.3."
+    warn "mise not found (recommended, not required - installs the pinned Python and AWS CLI; uv can manage Python on its own). See REQUIREMENTS.md section 3.3."
     return
   fi
   ok "mise found"
@@ -237,7 +237,7 @@ check_git() {
 
 check_aws_cli() {
   if ! command -v aws >/dev/null 2>&1; then
-    warn "AWS CLI not found (recommended, used in every module's 'Verify' section). $REQUIREMENTS_HINT"
+    warn "AWS CLI not found (recommended, used in every module's 'Verify' section) - run 'mise install' from this repository's root (see REQUIREMENTS.md section 3.3)"
     return
   fi
   have="$(first_version "$(aws --version 2>&1)")"
