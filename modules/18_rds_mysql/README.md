@@ -39,11 +39,16 @@ learning path, an RDS instance bills by the hour from the moment it exists
   for a single-AZ instance - and how that differs from modules like
   modules/03_vpc, which only need one AZ's worth of subnets for what they
   demonstrate.
-- `rds.Credentials.from_generated_secret("admin")`: instead of choosing a
-  password yourself, CDK generates one and stores it in a brand-new AWS
-  Secrets Manager secret, then wires the instance to read it. This is the
-  same mechanism module 09 (Secrets Manager) explains on its own - here you
-  see it used automatically by another service.
+- **A generated password that never appears in code.** A Secrets Manager
+  secret (with a fixed name, e.g. `learning-cdk-python-dev-secret-rds-mysql`)
+  generates the password, and the database receives it through
+  `rds.Credentials.from_password("admin", SecretValue.secrets_manager(<name>, json_field="password"))`
+  - a `{{resolve:secretsmanager:<name>:SecretString:password::}}`
+  *dynamic reference* that CloudFormation resolves at deploy time. This is
+  the service module 09 (Secrets Manager) explains on its own, used here by
+  another service. (The shorter `rds.Credentials.from_generated_secret()`
+  does the same on real AWS, but floci can't deploy the reference it
+  builds - see [`../../REQUIREMENTS.md`, section 10](../../REQUIREMENTS.md#10-observations-and-limitations).)
 - Why this instance is placed in a `PRIVATE_ISOLATED` subnet (no route to
   the internet at all) rather than a public one.
 
@@ -54,7 +59,7 @@ learning path, an RDS instance bills by the hour from the moment it exists
 | Amazon VPC | `aws_cdk.aws_ec2.Vpc` | L2 |
 | Amazon RDS | `aws_cdk.aws_rds.DatabaseInstance` | L2 |
 | Amazon RDS | `aws_cdk.aws_rds.DatabaseInstanceEngine`, `aws_cdk.aws_rds.MysqlEngineVersion` | L2 (helpers) |
-| Amazon RDS / AWS Secrets Manager | `aws_cdk.aws_rds.Credentials` | L2 (helper) |
+| Amazon RDS / AWS Secrets Manager | `aws_cdk.aws_rds.Credentials`, `aws_cdk.aws_secretsmanager.Secret`, `aws_cdk.SecretValue` | L2 (helper) |
 
 ## Prerequisites
 
@@ -78,7 +83,10 @@ check that: exactly one `AWS::RDS::DBInstance` is created, it uses the
 `mysql` engine at version `8.4.10`, `DeletionProtection` is `false` (so
 `cdk destroy` can remove it) and `PubliclyAccessible` is `false`, and every
 mandatory tag (see [`../../REQUIREMENTS.md`](../../REQUIREMENTS.md)
-section 7) is present on the instance. They run in well under a second,
+section 7) is present on the instance. The tests also check that the master password is a literal
+`{{resolve:secretsmanager:learning-cdk-python-<env>-secret-rds-mysql:SecretString:password::}}`
+reference to a named, generated secret, and that the database depends on
+that secret (a by-name reference has no implicit dependency). They run in well under a second,
 with no Docker, no floci, and no AWS credentials:
 
 ```bash
@@ -93,7 +101,7 @@ uv run pytest tests/unit/test_18_rds_mysql.py -v
 eval $(floci env)
 uv run cdk bootstrap   # once per floci instance - safe to re-run; see REQUIREMENTS.md section 5.7
 uv run cdk synth RdsMysqlStack
-uv run cdk deploy RdsMysqlStack --require-approval never
+uv run cdk deploy RdsMysqlStack --require-approval never --method=direct
 ```
 
 ## Deploy to real AWS (optional)
@@ -122,6 +130,7 @@ RDS instance and the generated secret visually.
 
 ```bash
 uv run cdk destroy RdsMysqlStack
+uv run python scripts/floci_prune.py --apply   # floci only: deletes the empty VPC floci leaves behind (REQUIREMENTS.md section 5.9)
 ```
 
 `removal_policy=RemovalPolicy.DESTROY` and `deletion_protection=False` mean

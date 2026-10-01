@@ -84,7 +84,7 @@ uv run pytest tests/unit/test_39_cloudwatch.py -v
 eval $(floci env)
 uv run cdk bootstrap   # once per floci instance - safe to re-run; see REQUIREMENTS.md section 5.7
 uv run cdk synth CloudWatchStack
-uv run cdk deploy CloudWatchStack --require-approval never
+uv run cdk deploy CloudWatchStack --require-approval never --method=direct
 ```
 
 ## Deploy to real AWS (optional)

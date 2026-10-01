@@ -42,6 +42,14 @@ FLOCI_IMAGE := floci/floci:latest
 ifeq ($(EXAMPLE),enterprise)
   CDK_APP := --app "uv run python examples/enterprise_stack/app.py"
   CDK_ENV := ENTERPRISE_ENVIRONMENT=$(ENV)
+  # An environment file that pins its cells to an explicit account (prd.json
+  # does) is deployed to floci *as* that account: floci treats a 12-digit
+  # access key id as the account id (examples/enterprise_stack/README.md,
+  # section 9). Read from the JSON file, so it's never repeated here.
+  # The regions an environment file pins its cells to (prd.json: two), so
+  # floci-prune checks each one after cdk-destroy.
+  ENV_REGIONS := $(shell python3 -c "import json; f='examples/enterprise_stack/environments/$(ENV).json'; print(*sorted({c['region'] for c in json.load(open(f))['cells'] if c.get('region')}))" 2>/dev/null)
+  ENV_ACCOUNT := $(shell python3 -c "import json,sys; f='examples/enterprise_stack/environments/$(ENV).json'; a={c['account'] for c in json.load(open(f))['cells'] if c.get('account')}; print(*a) if len(a)==1 else None" 2>/dev/null)
 else ifeq ($(EXAMPLE),)
   CDK_APP :=
   CDK_ENV :=
@@ -51,10 +59,10 @@ endif
 
 # `set -a; source <file>; set +a` exports every variable in ENV_FILE - the
 # same command REQUIREMENTS.md section 0, step 6 runs by hand.
-LOAD_ENV := set -a; source $(ENV_FILE); set +a;
+LOAD_ENV := set -a; source $(ENV_FILE); set +a; $(if $(ENV_ACCOUNT),export AWS_ACCESS_KEY_ID=$(ENV_ACCOUNT);)
 
-.PHONY: help check typecheck coverage cdk-synth cdk-deploy \
-	floci-start floci-stop floci-status floci-destroy
+.PHONY: help check typecheck coverage cdk-synth cdk-deploy cdk-destroy \
+	floci-start floci-stop floci-status floci-destroy floci-prune
 
 help: ## Show this list of targets
 	@echo "Targets:"
@@ -74,6 +82,7 @@ check: ## Check your OS + every required/recommended/optional tool (see REQUIREM
 typecheck: ## Type-check shared/, app.py, every module's stack.py, and examples/ with mypy
 	@uv run mypy shared app.py
 	@uv run mypy --explicit-package-bases examples/enterprise_stack
+	@uv run mypy scripts/floci_prune.py
 	@set -e; for dir in modules/*/; do \
 		[ -f "$${dir}stack.py" ] || continue; \
 		echo "mypy $${dir}stack.py"; \
@@ -119,8 +128,9 @@ floci-stop: ## Stop floci and any console, keeping their containers and data
 	$(COMPOSE) $(ALL_PROFILES) stop
 
 # floci runs in "persistent" mode (docker-compose.yml), keeping everything
-# you deployed in ./.floci/data. Those files are created by the container as
-# root, so they're deleted from inside a throwaway floci container (with
+# you deployed in ./.floci/data. After this target, run `uv run cdk
+# bootstrap` again before the next deploy (REQUIREMENTS.md section 5.7).
+# Those files are created by the container as root, so they're deleted from inside a throwaway floci container (with
 # this folder mounted at /repo) rather than with a plain `rm`, which would
 # need sudo.
 floci-destroy: ## Remove floci, its consoles, and ALL deployed local resources (asks first; CONFIRM=yes skips)
@@ -128,16 +138,34 @@ floci-destroy: ## Remove floci, its consoles, and ALL deployed local resources (
 		read -r -p "Delete floci's containers and every resource deployed to it (./.floci/data)? Type 'yes': " answer; \
 		[ "$$answer" = "yes" ] || { echo "Cancelled."; exit 1; }; \
 	fi
+	@# Stop floci first, so it can't start new containers while the ones it
+	@# already started are being removed below.
+	$(COMPOSE) $(ALL_PROFILES) stop
+	@# Containers floci itself started for deployed resources (Lambda, ECS,
+	@# EKS, EC2, ElastiCache, the ECR registry, ...) aren't Compose services,
+	@# so `down` would leave them behind (and couldn't remove the network they're
+	@# attached to) - floci labels every one with floci=true.
+	@ids="$$(docker ps -aq --filter label=floci=true)"; \
+	if [ -n "$$ids" ]; then docker rm -f $$ids >/dev/null && echo "Removed $$(echo $$ids | wc -w) container(s) floci had started."; fi
 	$(COMPOSE) $(ALL_PROFILES) down --remove-orphans
 	@if [ -d .floci ]; then \
 		docker run --rm --entrypoint bash -v "$(CURDIR):/repo" $(FLOCI_IMAGE) -c 'rm -rf /repo/.floci' && \
 		echo "Deleted ./.floci (all local floci data)."; \
 	fi
 
+# floci's CloudFormation never deletes AWS::EC2::VPC resources on stack
+# deletion, so every `cdk destroy` of a stack with a VPC leaves an empty VPC
+# behind - see REQUIREMENTS.md section 5.9. This lists (or, with APPLY=yes,
+# deletes) VPCs no stack owns. It refuses to run against real AWS.
+floci-prune: ## List VPCs floci left behind after cdk destroy; APPLY=yes deletes them (floci only)
+	$(LOAD_ENV) uv run python scripts/floci_prune.py $(foreach r,$(ENV_REGIONS),--region $(r)) $(if $(filter yes,$(APPLY)),--apply)
+
 # --- CDK shortcuts -------------------------------------------------------------
 
 # Both run `floci-status` then `floci-start` first, so floci is always up
-# (context lookups and every deploy talk to it). The long form they replace
+# (context lookups and every deploy talk to it). cdk-deploy uses
+# --method=direct so re-running it on an unchanged stack is a no-op instead
+# of duplicating resources on floci - see REQUIREMENTS.md section 5.8. The long form they replace
 # is in every module's README - `uv run cdk synth <StackId>` etc.
 cdk-synth: ## Synthesize one stack (STACK=VpcStack), every stack, or EXAMPLE=enterprise ENV=dev|stg|prd
 	@$(MAKE) --no-print-directory floci-status
@@ -153,5 +181,15 @@ cdk-deploy: ## Deploy to floci: STACK=VpcStack, STACK=all, or EXAMPLE=enterprise
 	fi
 	@$(MAKE) --no-print-directory floci-status
 	@$(MAKE) --no-print-directory floci-start
-	$(LOAD_ENV) uv run cdk bootstrap --quiet
-	$(LOAD_ENV) $(CDK_ENV) uv run cdk deploy $(CDK_APP) $(if $(filter-out all,$(STACK)),$(STACK),--all) --require-approval never
+	$(LOAD_ENV) $(CDK_ENV) uv run cdk bootstrap $(CDK_APP) --quiet
+	$(LOAD_ENV) $(CDK_ENV) uv run cdk deploy $(CDK_APP) $(if $(filter-out all,$(STACK)),$(STACK),--all) --require-approval never --method=direct
+
+cdk-destroy: ## Destroy from floci (STACK=VpcStack, STACK=all, or EXAMPLE=enterprise ENV=...), then delete the VPCs floci leaves
+	@if [ -z "$(EXAMPLE)" ] && [ -z "$(STACK)" ]; then \
+		echo "Pick what to destroy: make cdk-destroy STACK=VpcStack, STACK=all, or EXAMPLE=enterprise ENV=dev|stg|prd." >&2; exit 1; \
+	fi
+	@$(LOAD_ENV) if [ -z "$${AWS_ENDPOINT_URL:-}" ]; then \
+		echo "AWS_ENDPOINT_URL is not set in $(ENV_FILE) - cdk-destroy only targets floci." >&2; exit 1; \
+	fi
+	$(LOAD_ENV) $(CDK_ENV) uv run cdk destroy $(CDK_APP) $(if $(filter-out all,$(STACK)),$(STACK),--all) --force
+	@$(MAKE) --no-print-directory floci-prune APPLY=yes

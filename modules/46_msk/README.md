@@ -110,7 +110,7 @@ uv run pytest tests/unit/test_46_msk.py -v
 eval $(floci env)
 uv run cdk bootstrap   # once per floci instance - safe to re-run; see REQUIREMENTS.md section 5.7
 uv run cdk synth MskStack
-uv run cdk deploy MskStack --require-approval never
+uv run cdk deploy MskStack --require-approval never --method=direct
 ```
 
 **What floci creates here (checked while writing this module - re-check
@@ -166,6 +166,7 @@ resources visually.
 
 ```bash
 uv run cdk destroy MskStack
+uv run python scripts/floci_prune.py --apply   # floci only: deletes the empty VPC floci leaves behind (REQUIREMENTS.md section 5.9)
 ```
 
 ## Notes and cautions

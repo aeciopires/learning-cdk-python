@@ -20,7 +20,7 @@ exists, like RDS).
 
 from __future__ import annotations
 
-from aws_cdk import RemovalPolicy, Stack
+from aws_cdk import RemovalPolicy, SecretValue, Stack
 from aws_cdk import aws_docdb as docdb
 from aws_cdk import aws_ec2 as ec2
 from aws_cdk import aws_secretsmanager as secretsmanager
@@ -58,9 +58,12 @@ class DocumentDbStack(Stack):
     and never appears in this code or in the synthesized template: the
     cluster receives it as a `{{resolve:secretsmanager:...}}` dynamic
     reference that CloudFormation resolves at deploy time. The secret is
-    created explicitly here, instead of letting `docdb.Login(username=...)`
-    generate one, because that shortcut also adds a
-    `SecretTargetAttachment` which floci can't deploy - see README.md,
+    created explicitly here, with a fixed name, instead of letting
+    `docdb.Login(username=...)` generate one, because that shortcut also adds
+    a `SecretTargetAttachment` which floci can't deploy; and the reference is
+    built from the secret's *name* (a plain string) rather than
+    `secret.secret_value_from_json()`, whose `Fn::Join` + `Ref` form floci
+    rejects ("Invalid Secrets Manager dynamic reference") - see README.md,
     "Notes and cautions".
     """
 
@@ -122,6 +125,7 @@ class DocumentDbStack(Stack):
                 # characters docdb.Login excludes from generated passwords.
                 exclude_characters='/"@',
             ),
+            removal_policy=RemovalPolicy.DESTROY,
         )
         apply_name_tag(self.master_secret, secret_name)
 
@@ -133,7 +137,7 @@ class DocumentDbStack(Stack):
             engine_version=ENGINE_VERSION,
             master_user=docdb.Login(
                 username=MASTER_USERNAME,
-                password=self.master_secret.secret_value_from_json("password"),
+                password=SecretValue.secrets_manager(secret_name, json_field="password"),
             ),
             instance_type=ec2.InstanceType(INSTANCE_TYPE),
             instances=1,
@@ -148,6 +152,9 @@ class DocumentDbStack(Stack):
             deletion_protection=False,
         )
         apply_name_tag(self.cluster, cluster_name)
+        # A by-name reference carries no implicit dependency, so make sure the
+        # secret exists before CloudFormation creates the cluster.
+        self.cluster.node.add_dependency(self.master_secret)
 
 
 STACK_CLASS = DocumentDbStack

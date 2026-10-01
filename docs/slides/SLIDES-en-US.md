@@ -469,7 +469,7 @@ uv run cdk --version              # confirms the CDK Toolkit is reachable throug
 uv run cdk list                                          # every module's stack id
 uv run cdk bootstrap                                     # once per floci / AWS account+region
 uv run cdk synth VpcStack                                 # safe, local, no endpoint call
-uv run cdk deploy VpcStack --require-approval never       # creates resources (floci by default)
+uv run cdk deploy VpcStack --require-approval never --method=direct  # creates resources (floci by default)
 uv run cdk destroy VpcStack                                # tears them back down
 ```
 
@@ -489,7 +489,7 @@ make check                               # OS + every required/recommended/optio
 ```
 
 <div class="stats">
-  <div class="stat"><span class="num">293</span><span class="label">tests in 56 files — every module (incl. 44's boto3 script), shared/, app.py, and the enterprise example</span></div>
+  <div class="stat"><span class="num">322</span><span class="label">tests in 57 files — every module (incl. 44's boto3 script), shared/, app.py, and the enterprise example</span></div>
   <div class="stat"><span class="num">100%</span><span class="label">line + branch coverage — goal 100%, minimum accepted 80%</span></div>
   <div class="stat"><span class="num">~5s</span><span class="label">to run everything — pure in-memory CloudFormation assertions</span></div>
 </div>
@@ -504,8 +504,9 @@ make check                               # OS + every required/recommended/optio
 make floci-start UI=floci-dash        # start floci (+ a console) and wait until healthy
 make floci-status                     # is it running? which URLs?
 make cdk-synth STACK=VpcStack         # = uv run cdk synth VpcStack
-make cdk-deploy STACK=SqsStack        # = uv run cdk bootstrap + uv run cdk deploy SqsStack
+make cdk-deploy STACK=SqsStack        # = cdk bootstrap + cdk deploy SqsStack --method=direct
 make cdk-synth EXAMPLE=enterprise ENV=stg
+make cdk-destroy STACK=SqsStack       # = cdk destroy + delete the VPCs floci leaves behind
 make floci-stop                       # pause - deployed resources are kept
 make floci-destroy                    # wipe floci and everything deployed to it (asks first)
 ```
@@ -791,7 +792,7 @@ cp .env.example .env; set -a; source .env; set +a
 uv run cdk list                                            # see every module's stack id
 uv run cdk bootstrap                                       # once per floci (else: SsmParameterNotFound)
 uv run cdk synth VpcStack                                   # preview the CloudFormation template
-uv run cdk deploy VpcStack --require-approval never          # create the resources, against floci
+uv run cdk deploy VpcStack --require-approval never --method=direct  # create the resources, against floci
 uv run cdk destroy VpcStack                                   # clean up when you're done
 ```
 

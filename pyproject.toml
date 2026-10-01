@@ -32,7 +32,7 @@ testpaths = ["tests"]
 # Branch coverage: an `if` counts as covered only when both its "true" and
 # "false" paths have run, not just its first line.
 branch = true
-source = ["app", "shared", "modules", "examples"]
+source = ["app", "shared", "modules", "examples", "scripts"]
 omit = ["*/tests/*", "tests/*"]
 
 [tool.coverage.report]

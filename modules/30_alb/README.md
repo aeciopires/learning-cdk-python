@@ -80,7 +80,7 @@ uv run pytest tests/unit/test_30_alb.py -v
 eval $(floci env)
 uv run cdk bootstrap   # once per floci instance - safe to re-run; see REQUIREMENTS.md section 5.7
 uv run cdk synth AlbStack
-uv run cdk deploy AlbStack --require-approval never
+uv run cdk deploy AlbStack --require-approval never --method=direct
 ```
 
 ## Deploy to real AWS (optional)
@@ -114,6 +114,7 @@ load balancer, listener, and target group visually.
 
 ```bash
 uv run cdk destroy AlbStack
+uv run python scripts/floci_prune.py --apply   # floci only: deletes the empty VPC floci leaves behind (REQUIREMENTS.md section 5.9)
 ```
 
 ## Notes and cautions

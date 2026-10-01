@@ -100,7 +100,7 @@ uv run pytest tests/unit/test_01_iam.py -v
 # From the repository root - make sure you've loaded .env (see REQUIREMENTS.md section 0)
 uv run cdk bootstrap   # once per floci instance - safe to re-run; see REQUIREMENTS.md section 5.7
 uv run cdk synth IamStack     # generates the CloudFormation template, creates nothing
-uv run cdk deploy IamStack --require-approval never
+uv run cdk deploy IamStack --require-approval never --method=direct
 ```
 
 The `cdk bootstrap` line is needed once per floci instance - the first

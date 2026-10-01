@@ -65,7 +65,8 @@ whenever one is edited.
 ├── .env.example             # every CDK_*/AWS_* variable a module reads, with comments
 ├── Makefile                 # optional shortcuts: check, typecheck, coverage, floci-*, cdk-synth/cdk-deploy - REQUIREMENTS.md sections 3.4 and 5.6
 ├── scripts/
-│   └── check-deps.sh          # what `make check` runs - OS + every tool in REQUIREMENTS.md section 3
+│   ├── check-deps.sh          # what `make check` runs - OS + every tool in REQUIREMENTS.md section 3
+│   └── floci_prune.py         # floci-only: deletes the VPCs `cdk destroy` leaves behind - REQUIREMENTS.md section 5.9
 ├── shared/                  # tagging.py, naming.py, config.py - see section 5 and 6
 ├── docs/
 │   ├── LEARNING-PATH.md    # the full 46-module table, grouped into 11 phases
@@ -113,7 +114,10 @@ to each other.
 requires editing `app.py`. This only works because every `modules/NN_service/stack.py`
 follows the same contract:
 
-**This contract applies only to `modules/NN_service/`.** `examples/enterprise_stack/`
+**This contract applies only to `modules/NN_service/`.** (The enterprise
+example's own stack ids are `Enterprise<Environment><Cell>Stack`, e.g.
+`EnterpriseStgCell01Stack` - the environment is part of the id so one
+environment's deploy never replaces another's stacks.) `examples/enterprise_stack/`
 is a deliberately different shape (one combined stack assembling several
 AWS services, not one lesson per service) with its own `app.py`, its own
 tests, and its own README - see
@@ -138,7 +142,14 @@ for why it is not a 45th module.
    deploy sections start with a `uv run cdk bootstrap` line (floci: "once
    per floci instance"; real AWS: "once per AWS account/region") - a fresh
    environment fails the first `cdk deploy` with `SsmParameterNotFound`
-   otherwise (see `REQUIREMENTS.md` section 5.7).
+   otherwise (see `REQUIREMENTS.md` section 5.7). The floci deploy command
+   always ends with `--require-approval never --method=direct`, so
+   re-running it on an unchanged stack is a no-op instead of duplicating
+   resources on floci (`REQUIREMENTS.md` section 5.8); the real-AWS one
+   keeps the default change-set method. A module that creates a VPC also
+   has `uv run python scripts/floci_prune.py --apply` in its "Clean up"
+   section, right after `cdk destroy` - floci never deletes VPCs
+   (`REQUIREMENTS.md` section 5.9).
 7. A `tests/unit/test_NN_service.py` file (same numbering as the module
    directory) that builds the stack with the shared `config` fixture and
    asserts on its synthesized template via `aws_cdk.assertions` - see
@@ -246,6 +257,17 @@ and example data (bucket contents, queue messages, etc.) - this is the
 "tag and resource values" exception mentioned in this repository's founding
 brief.
 
+**Secrets referenced by name.** A module that passes a Secrets Manager
+value into another resource (a database master password, ...) creates the
+secret with a fixed `secret_name` and references it with
+`SecretValue.secrets_manager(<secret_name>, json_field=...)` - a plain
+`{{resolve:secretsmanager:<name>:...}}` string - plus an explicit
+`node.add_dependency()` on the secret, as modules 18, 19, 20, and 45 do.
+Don't use `rds.Credentials.from_generated_secret()` or
+`secret.secret_value_from_json()` for this: they build the reference with
+`Fn::Join` + `Ref`, which floci rejects ("Invalid Secrets Manager dynamic
+reference") - see `REQUIREMENTS.md` section 10.
+
 ## 6. Account/region flexibility (non-negotiable)
 
 No module hardcodes an AWS account ID, region, or Availability Zone name.
@@ -318,7 +340,7 @@ renamed, or removed, re-check every anchor link in that file.
 4. **Validate it actually synthesizes**: `uv run cdk synth <StackId>` must
    succeed with no errors. Where Docker is available, `docker compose up -d
    floci`, `uv run cdk bootstrap` (once per floci instance), then
-   `uv run cdk deploy <StackId> --require-approval never`
+   `uv run cdk deploy <StackId> --require-approval never --method=direct`
    followed by `uv run cdk destroy <StackId> -f` is the full round-trip
    check.
 5. **Write and run its unit tests**: `uv run pytest tests/unit/test_NN_service.py -v`

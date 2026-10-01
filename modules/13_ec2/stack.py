@@ -3,6 +3,7 @@
 AWS docs used while writing this module:
 - Instance construct: https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_ec2/Instance.html
 - MachineImage: https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_ec2/MachineImage.html
+- Reference AMIs using Systems Manager parameters (`resolve:ssm:` in place of an AMI ID): https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-systems-manager-parameter-to-find-AMI.html
 - Vpc construct: https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_ec2/Vpc.html
 - SecurityGroup construct: https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_ec2/SecurityGroup.html
 - AWS Systems Manager Session Manager: https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager.html
@@ -22,6 +23,11 @@ from constructs import Construct
 from shared.config import AppConfig
 from shared.naming import resource_name
 from shared.tagging import apply_name_tag, apply_standard_tags
+
+# AWS's public SSM parameter that always points at the current Amazon Linux
+# 2023 (kernel 6.1, x86_64) AMI in whichever region the stack is deployed to
+# - the same parameter `ec2.MachineImage.latest_amazon_linux2023()` reads.
+AL2023_AMI_PARAMETER = "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64"
 
 STACK_ID = "Ec2Stack"
 
@@ -44,6 +50,17 @@ class Ec2Stack(Stack):
     is deployed to a real account (the SSM Agent ships preinstalled on
     Amazon Linux 2023) - wiring up the agent/role in more detail is out of
     scope for this module, which stays focused on EC2 itself.
+
+    The AMI is never hardcoded (AMI IDs differ per region and go stale):
+    `MachineImage.resolve_ssm_parameter_at_launch()` writes
+    `ImageId: resolve:ssm:<AWS public parameter>` into the template, and EC2
+    resolves the current Amazon Linux 2023 AMI when it launches the
+    instance. The more common `latest_amazon_linux2023()` instead adds an
+    SSM-typed CloudFormation *parameter* - and the CDK CLI never skips
+    deploying a stack with SSM parameters ("some parameters come from SSM so
+    we have to assume they may have changed"), so every re-run of `cdk
+    deploy` would update the stack, which on floci launches a duplicate
+    instance. See README.md and REQUIREMENTS.md section 5.8.
     """
 
     def __init__(
@@ -104,7 +121,9 @@ class Ec2Stack(Stack):
             "AppInstance",
             instance_name=instance_name,
             instance_type=ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.MICRO),
-            machine_image=ec2.MachineImage.latest_amazon_linux2023(),
+            machine_image=ec2.MachineImage.resolve_ssm_parameter_at_launch(
+                AL2023_AMI_PARAMETER, os=ec2.OperatingSystemType.LINUX
+            ),
             vpc=self.vpc,
             vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
             security_group=self.security_group,

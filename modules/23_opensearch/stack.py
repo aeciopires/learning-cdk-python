@@ -11,6 +11,8 @@ AWS docs used while writing this module:
 - CapacityConfig, EbsOptions, ZoneAwarenessConfig (all in the same module):
   https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_opensearchservice/
 - AccountPrincipal construct (IAM): https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_iam/AccountPrincipal.html
+- CfnDomain (the L1 resource behind Domain; its `access_policies` property): https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_opensearchservice/CfnDomain.html
+- Escape hatches (`node.default_child`): https://docs.aws.amazon.com/cdk/v2/guide/cfn-layer.html
 - Amazon OpenSearch Service - identity and access management: https://docs.aws.amazon.com/opensearch-service/latest/developerguide/ac.html
 - Amazon OpenSearch Service pricing (hourly per data node): https://aws.amazon.com/opensearch-service/pricing/
 
@@ -52,6 +54,16 @@ class OpenSearchStack(Stack):
     (not a hardcoded account number - see CLAUDE.md section 6) scopes
     `es:*` to callers authenticated as this AWS account, not to the public
     internet at large.
+
+    The access policy is set on the underlying L1 resource
+    (`AWS::OpenSearchService::Domain`'s `AccessPolicies` property, through
+    the `node.default_child` escape hatch) instead of the L2 `Domain`'s own
+    `access_policies` argument. The L2 argument applies the policy through a
+    separate Lambda-backed custom resource (`Custom::OpenSearchAccessPolicy`)
+    that calls the OpenSearch API after the domain exists; floci's
+    CloudFormation doesn't create OpenSearch domains, so that call fails
+    ("Domain not found"). Setting the property directly produces the same
+    policy on real AWS with one resource fewer - see README.md.
     """
 
     def __init__(
@@ -87,17 +99,23 @@ class OpenSearchStack(Stack):
             ),
             ebs=opensearchservice.EbsOptions(volume_size=10),
             zone_awareness=opensearchservice.ZoneAwarenessConfig(enabled=False),
-            access_policies=[
+            removal_policy=RemovalPolicy.DESTROY,
+        )
+        apply_name_tag(self.domain, domain_name)
+
+        access_policy = iam.PolicyDocument(
+            statements=[
                 iam.PolicyStatement(
                     effect=iam.Effect.ALLOW,
                     principals=[iam.AccountPrincipal(Aws.ACCOUNT_ID)],
                     actions=["es:*"],
                     resources=["*"],
                 )
-            ],
-            removal_policy=RemovalPolicy.DESTROY,
+            ]
         )
-        apply_name_tag(self.domain, domain_name)
+        cfn_domain = self.domain.node.default_child
+        assert isinstance(cfn_domain, opensearchservice.CfnDomain)
+        cfn_domain.access_policies = access_policy.to_json()
 
 
 STACK_CLASS = OpenSearchStack

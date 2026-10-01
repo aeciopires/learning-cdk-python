@@ -83,7 +83,7 @@ uv run pytest tests/unit/test_33_route53.py -v
 eval $(floci env)
 uv run cdk bootstrap   # once per floci instance - safe to re-run; see REQUIREMENTS.md section 5.7
 uv run cdk synth Route53Stack
-uv run cdk deploy Route53Stack --require-approval never
+uv run cdk deploy Route53Stack --require-approval never --method=direct
 ```
 
 ## Deploy to real AWS (optional)
@@ -117,6 +117,7 @@ hosted zone and record visually.
 
 ```bash
 uv run cdk destroy Route53Stack
+uv run python scripts/floci_prune.py --apply   # floci only: deletes the empty VPC floci leaves behind (REQUIREMENTS.md section 5.9)
 ```
 
 ## Notes and cautions

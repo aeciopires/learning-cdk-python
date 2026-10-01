@@ -44,6 +44,15 @@ more expensive modules in this learning path.
   access with an IAM policy statement naming this AWS account as the only
   allowed principal - simpler to reason about for a first look at this
   service.
+- **An escape hatch.** The policy is written into the domain's own
+  CloudFormation `AccessPolicies` property through `domain.node.default_child`
+  (the underlying `CfnDomain`), instead of the L2 `Domain`'s
+  `access_policies` argument. That argument applies the policy with an
+  extra Lambda-backed custom resource (`Custom::OpenSearchAccessPolicy`)
+  that calls the OpenSearch API once the domain exists - which fails on
+  floci, whose CloudFormation doesn't create OpenSearch domains ("Domain
+  not found"). The resulting policy on real AWS is the same. See
+  [Escape hatches](https://docs.aws.amazon.com/cdk/v2/guide/cfn-layer.html).
 - The 28-character hard limit on OpenSearch domain names, and how this
   module's `stack.py` handles it - see
   [Notes and cautions](#notes-and-cautions).
@@ -54,7 +63,8 @@ more expensive modules in this learning path.
 |---|---|---|
 | Amazon OpenSearch Service | `aws_cdk.aws_opensearchservice.Domain` | L2 |
 | Amazon OpenSearch Service | `aws_cdk.aws_opensearchservice.EngineVersion`, `CapacityConfig`, `EbsOptions`, `ZoneAwarenessConfig` | L2 (helpers) |
-| AWS IAM | `aws_cdk.aws_iam.PolicyStatement`, `aws_cdk.aws_iam.AccountPrincipal` | L2 (helpers) |
+| Amazon OpenSearch Service | `aws_cdk.aws_opensearchservice.CfnDomain` (via `node.default_child`, for `access_policies`) | L1 (escape hatch) |
+| AWS IAM | `aws_cdk.aws_iam.PolicyDocument`, `aws_cdk.aws_iam.PolicyStatement`, `aws_cdk.aws_iam.AccountPrincipal` | L2 (helpers) |
 
 ## Prerequisites
 
@@ -86,7 +96,9 @@ a single-node, single-AZ deployment (`EngineVersion: OpenSearch_3.7`,
 `InstanceCount: 1`, `InstanceType: t3.small.search`,
 `ZoneAwarenessEnabled: false`), the synthesized `DomainName` respects
 Amazon OpenSearch Service's hard 28-character limit (see "Notes and
-cautions" below), and every mandatory tag (see
+cautions" below), the access policy is the domain's own `AccessPolicies`
+(an `Allow es:*` statement) with no `Custom::OpenSearchAccessPolicy`
+resource, and every mandatory tag (see
 [`../../REQUIREMENTS.md`](../../REQUIREMENTS.md) section 7) is present on
 the domain. They run in well under a second, with no Docker, no floci, and
 no AWS credentials:
@@ -103,7 +115,7 @@ uv run pytest tests/unit/test_23_opensearch.py -v
 eval $(floci env)
 uv run cdk bootstrap   # once per floci instance - safe to re-run; see REQUIREMENTS.md section 5.7
 uv run cdk synth OpenSearchStack
-uv run cdk deploy OpenSearchStack --require-approval never
+uv run cdk deploy OpenSearchStack --require-approval never --method=direct
 ```
 
 ## Deploy to real AWS (optional)
@@ -175,5 +187,7 @@ uv run cdk destroy OpenSearchStack
 - [Amazon OpenSearch Service pricing](https://aws.amazon.com/opensearch-service/pricing/)
 - [AWS CDK API Reference (Python) - `aws_cdk.aws_opensearchservice.Domain`](https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_opensearchservice/Domain.html)
 - [AWS CDK API Reference (Python) - `aws_cdk.aws_opensearchservice.EngineVersion`](https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_opensearchservice/EngineVersion.html)
+- [AWS CDK API Reference (Python) - `aws_cdk.aws_opensearchservice.CfnDomain`](https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_opensearchservice/CfnDomain.html)
+- [AWS CDK v2 Developer Guide - Escape hatches](https://docs.aws.amazon.com/cdk/v2/guide/cfn-layer.html)
 - [AWS CDK API Reference (Python) - `aws_cdk.aws_iam.AccountPrincipal`](https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_iam/AccountPrincipal.html)
 - [floci - AWS service coverage](https://floci.io/aws/)

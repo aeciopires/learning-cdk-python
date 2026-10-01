@@ -84,7 +84,7 @@ uv run pytest tests/unit/test_17_lambda.py -v
 eval $(floci env)
 uv run cdk bootstrap   # once per floci instance - safe to re-run; see REQUIREMENTS.md section 5.7
 uv run cdk synth LambdaStack
-uv run cdk deploy LambdaStack --require-approval never
+uv run cdk deploy LambdaStack --require-approval never --method=direct
 ```
 
 ## Deploy to real AWS (optional)

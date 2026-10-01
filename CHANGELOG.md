@@ -375,3 +375,75 @@ written in English by convention.
   environment now sets both.
 - `shared/tagging.py`: a `mypy` error (`cell_id` passed as `str | None` to
   `Tags.add`) the broken command above had been hiding.
+- **Every module now deploys on floci, and re-running `cdk deploy` no
+  longer duplicates resources.** All 45 stacks were deployed against floci
+  (with floci-dash), then deployed a second time: all 45 reported
+  `(no changes)`, and the count of every resource type (KMS keys, REST
+  APIs, EC2 instances, ...) stayed the same.
+- `docker-compose.yml`: `FLOCI_HOSTNAME: floci` and `FLOCI_TLS_ENABLED:
+  "true"` (the settings floci's own Compose file uses). CDK custom resources
+  (S3 `auto_delete_objects`, EventBridge's log-group policy, EKS's cluster
+  provider, ...) failed with `connect ECONNREFUSED <floci-ip>:443`: their
+  handler reports to CloudFormation's `ResponseURL` over `https://` on port
+  443, which floci only serves with TLS enabled. Affected modules 12, 16,
+  25, 28, 32.
+- Duplicate resources on re-deploy: every floci deploy command (module
+  READMEs, `README.md`, `CONTRIBUTING.md`, the enterprise example, `make
+  cdk-deploy`, both slide decks) now adds `--method=direct`. With the
+  default change-set method, floci reports an empty change set as
+  `CREATE_COMPLETE` instead of the `FAILED` / "didn't contain changes" the
+  CDK expects, so the CDK executed it, and floci's update re-created
+  resources without a fixed name (KMS keys, REST APIs) every time. Explained
+  in the new `REQUIREMENTS.md` section 5.8.
+- Modules 18, 19, 20 (and 45): the master-password secret is created
+  explicitly with a fixed name and referenced by name
+  (`SecretValue.secrets_manager(...)`), because floci rejects the
+  `Fn::Join` + `Ref` form of `{{resolve:secretsmanager:...}}` that
+  `rds.Credentials.from_generated_secret()` builds ("Invalid Secrets
+  Manager dynamic reference").
+- Module 23: the OpenSearch access policy is set on the domain's own
+  `AccessPolicies` (escape hatch) instead of through the L2's
+  `Custom::OpenSearchAccessPolicy`, which failed on floci ("Domain not
+  found").
+- Module 13 (and the enterprise `ec2` builder): the AMI is resolved by EC2
+  at launch (`MachineImage.resolve_ssm_parameter_at_launch`) instead of
+  through an SSM template parameter, which made the CDK redeploy the stack
+  on every `cdk deploy` (and floci launch a duplicate instance).
+- `make floci-destroy` now stops floci first and also removes the
+  containers floci started (label `floci=true`), which `docker compose
+  down` left behind.
+- `README.md`'s quickstart was missing `uv run cdk bootstrap`.
+- **VPCs duplicated across destroy + deploy cycles on floci.** An audit of
+  every networking resource type (VPC, subnet, internet/NAT gateway, EIP,
+  security group, route table, network ACL, transit gateway, peering,
+  instance) against the physical ids CloudFormation owns showed no
+  duplicates from re-deploying - but `cdk destroy` left each stack's VPC
+  behind (and nothing else), because floci's CloudFormation has no delete
+  step for `AWS::EC2::VPC`. Added `scripts/floci_prune.py` (floci only -
+  it refuses any other endpoint), which deletes VPCs no stack owns, with
+  tests (`tests/unit/test_floci_prune.py`, 100% covered); a "Clean up" line
+  for it in the 17 modules that create a VPC and in the enterprise example;
+  `make floci-prune` and a new `make cdk-destroy` (destroy + prune); and
+  `REQUIREMENTS.md` section 5.9. Verified by destroying one stack of each
+  networking kind (10 VPCs left), pruning, redeploying: 0 orphans.
+- **`examples/enterprise_stack` deploys on floci in all three
+  environments, and re-deploys without duplicates.** `dev`, `stg`, and both
+  `prd` cells were deployed, then deployed again: every stack reported
+  `(no changes)`, and resource counts stayed identical in all three
+  account/region contexts (`000000000000/us-east-1`,
+  `111111111111/us-east-1`, `111111111111/us-west-2`).
+  - Stack ids now include the environment (`EnterpriseDevCell01Stack`,
+    `EnterpriseStgCell01Stack`, `EnterprisePrdCell01Stack`, ...). Before,
+    every environment's `cell-01` was the same `EnterpriseCellCell01Stack`,
+    so deploying `stg` replaced `dev`'s stack.
+  - `prd` (pinned to placeholder account `111111111111`) deploys to floci by
+    using `111111111111` as the access key id - floci treats a 12-digit key
+    as the account id - after bootstrapping both of its regions.
+    `make cdk-deploy EXAMPLE=enterprise ENV=prd` does both automatically,
+    reading the account from `environments/prd.json`.
+  - `prd` now synthesizes without any AWS credentials; the README's claim
+    that its `ec2` cell needed a live AMI lookup was outdated by the
+    `resolve_ssm_parameter_at_launch` change above.
+- Tests for each fix; the repository stays at 100% coverage (322 tests).
+- `CLAUDE.md` and `REQUIREMENTS.md` section 10 document the rules these
+  fixes follow (`--method=direct` on floci, secrets referenced by name).

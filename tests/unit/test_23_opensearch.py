@@ -54,3 +54,29 @@ def test_domain_has_the_mandatory_tags(config):
         template.has_resource_properties(
             "AWS::OpenSearchService::Domain", {"Tags": Match.array_with([tag])}
         )
+
+
+def test_access_policy_is_on_the_domain_not_a_custom_resource(config):
+    """floci's CloudFormation doesn't create OpenSearch domains, so the L2's
+    Custom::OpenSearchAccessPolicy (an API call after creation) can't work
+    there - the policy is set as the domain's own AccessPolicies instead."""
+    template = _synth(config)
+    template.resource_count_is("Custom::OpenSearchAccessPolicy", 0)
+    template.has_resource_properties(
+        "AWS::OpenSearchService::Domain",
+        {
+            "AccessPolicies": {
+                "Statement": [
+                    Match.object_like(
+                        {
+                            "Effect": "Allow",
+                            "Action": "es:*",
+                            "Resource": "*",
+                            "Principal": {"AWS": Match.any_value()},
+                        }
+                    )
+                ],
+                "Version": "2012-10-17",
+            }
+        },
+    )

@@ -18,6 +18,8 @@
     - [5.5 - Optional: floci-dash, a second console](#55---optional-floci-dash-a-second-console)
     - [5.6 - Optional: `make` shortcuts for floci and the CDK](#56---optional-make-shortcuts-for-floci-and-the-cdk)
     - [5.7 - Bootstrapping the CDK (once per floci instance or AWS account/region)](#57---bootstrapping-the-cdk-once-per-floci-instance-or-aws-accountregion)
+    - [5.8 - Re-running `cdk deploy` on floci without duplicating resources](#58---re-running-cdk-deploy-on-floci-without-duplicating-resources)
+    - [5.9 - `cdk destroy` on floci leaves VPCs behind](#59---cdk-destroy-on-floci-leaves-vpcs-behind)
   - [6. Network ports used](#6-network-ports-used)
   - [7. Tagging policy](#7-tagging-policy)
   - [8. Naming policy](#8-naming-policy)
@@ -673,9 +675,11 @@ requires them.
 | `make floci-start UI=floci-dash` | same, plus the floci-dash console (section 5.5); `UI=floci-ui` for floci-ui (section 5.4, needs its clone), `UI="floci-ui floci-dash"` for both | `docker compose --profile floci-dash up -d` |
 | `make floci-stop` | stops floci and any console, keeping every deployed resource | `docker compose --profile floci-ui --profile floci-dash stop` |
 | `make floci-destroy` | removes floci, its consoles, **and every resource deployed to it** (`./.floci/`) - asks you to type `yes` first (`CONFIRM=yes` skips the question) | `docker compose ... down` + deleting `./.floci/` |
+| `make cdk-destroy STACK=VpcStack` | destroys one stack (or `STACK=all`, or `EXAMPLE=enterprise ENV=...`) from floci, then deletes the VPCs floci leaves behind (section 5.9) | `uv run cdk destroy VpcStack` + `uv run python scripts/floci_prune.py --apply` |
+| `make floci-prune` | lists the VPCs floci left behind after `cdk destroy`; `APPLY=yes` deletes them (section 5.9) | `uv run python scripts/floci_prune.py [--apply]` |
 | `make cdk-synth STACK=VpcStack` | synthesizes one module's stack (no `STACK` = every stack) | `uv run cdk synth VpcStack` |
 | `make cdk-synth EXAMPLE=enterprise ENV=stg` | synthesizes the [enterprise example](examples/enterprise_stack/README.md) for `dev`, `stg`, or `prd` | `ENTERPRISE_ENVIRONMENT=stg uv run cdk synth --app "uv run python examples/enterprise_stack/app.py"` |
-| `make cdk-deploy STACK=VpcStack` | bootstraps floci (if needed) and deploys one stack to it; `STACK=all` deploys every module, `EXAMPLE=enterprise ENV=...` the example | `uv run cdk bootstrap` + `uv run cdk deploy VpcStack --require-approval never` |
+| `make cdk-deploy STACK=VpcStack` | bootstraps floci (if needed) and deploys one stack to it; `STACK=all` deploys every module, `EXAMPLE=enterprise ENV=...` the example (for `ENV=prd`, acting as `prd.json`'s account and bootstrapping its regions - see the [enterprise README, section 9](examples/enterprise_stack/README.md#9-running-it)) | `uv run cdk bootstrap` + `uv run cdk deploy VpcStack --require-approval never --method=direct` |
 
 Details worth knowing:
 
@@ -686,9 +690,9 @@ Details worth knowing:
 - `cdk-deploy` **only deploys to floci**: it refuses to run if
   `AWS_ENDPOINT_URL` isn't set in that file. To deploy to a real AWS
   account, follow a module README's "Deploy to real AWS" section by hand.
-- There's no `cdk-destroy` shortcut on purpose - remove one stack with
-  `uv run cdk destroy <StackId>` (each module's "Clean up" section), or
-  everything at once with `make floci-destroy`.
+- `make cdk-destroy` (same `STACK=`/`EXAMPLE=`/`ENV=` options as
+  `cdk-deploy`) destroys, then deletes the VPCs floci leaves behind (section
+  5.9); `make floci-destroy` wipes everything at once.
 - Run `make` with no target to list every target and these examples.
 
 ### 5.7 - Bootstrapping the CDK (once per floci instance or AWS account/region)
@@ -754,6 +758,89 @@ you before every deploy.
 aws cloudformation describe-stacks --stack-name CDKToolkit --query "Stacks[0].StackStatus"
 aws ssm get-parameter --name /cdk-bootstrap/hnb659fds/version --query Parameter.Value
 ```
+
+### 5.8 - Re-running `cdk deploy` on floci without duplicating resources
+
+**Always add `--method=direct` when deploying to floci** - every module's
+"Deploy with floci" command already does:
+
+```bash
+uv run cdk deploy KmsStack --require-approval never --method=direct
+```
+
+**The problem it avoids.** With the default deploy method, running
+`cdk deploy` a second time on an unchanged stack creates a *second* copy of
+some resources on floci - a new KMS key, a new API Gateway REST API, and so
+on - each time, leaving the old ones orphaned (still there, no longer in
+the stack). Resources with a fixed physical name (an SQS queue, an S3
+bucket) aren't duplicated, but resources AWS identifies only by a generated
+ID (a KMS key) or whose names needn't be unique (REST APIs) are.
+
+**Why it happens** (checked while writing this - re-check with newer floci
+and CDK versions):
+
+1. The CDK CLI deploys through a CloudFormation *change set*: it creates
+   one, and executes it only if it contains changes. It recognizes an
+   empty change set the way real CloudFormation reports one - status
+   `FAILED` with the reason "The submitted information didn't contain
+   changes".
+2. floci reports an empty change set as `CREATE_COMPLETE` with no changes
+   listed, so the CDK executes it as a normal update.
+3. floci's update re-creates resources that have no fixed physical name,
+   even when their properties didn't change.
+
+**Why `--method=direct` fixes it.** It deploys without a change set. In that
+mode the CDK first compares the template it just synthesized with the one
+already deployed and, when they're identical, skips the deployment
+entirely (`✅  KmsStack (no changes)`) - floci is never asked to update
+anything. On real AWS, the default change-set method behaves correctly, so
+the "Deploy to real AWS" commands keep it. `make cdk-deploy` (section 5.6)
+always uses `--method=direct`.
+
+**What it can't fix.** When you *change* a stack's code and deploy again,
+floci still performs an update, and step 3 still re-creates the unnamed
+resources. For a clean result after a code change on floci, recreate the
+stack instead: `uv run cdk destroy <StackId>` then deploy again. If orphans
+have already piled up, `make floci-destroy` (section 5.6) wipes floci
+completely; bootstrap again afterwards (section 5.7).
+
+### 5.9 - `cdk destroy` on floci leaves VPCs behind
+
+**The problem.** On floci, `cdk destroy` of a stack that creates a VPC
+deletes the stack and everything in the VPC - subnets, route tables,
+internet and NAT gateways, Elastic IPs, security groups, instances - but
+leaves the **VPC itself** behind, empty except for the default security
+group and main route table every VPC comes with. Deploy the stack again and
+it creates a new VPC, so each destroy + deploy cycle adds one more
+duplicate. (Checked while writing this by destroying one stack of each
+networking kind: exactly one VPC per destroyed VPC was left, and nothing
+else. Re-running `cdk deploy` without a destroy duplicates nothing - see
+section 5.8.)
+
+**Why.** floci's CloudFormation has no delete step for `AWS::EC2::VPC`: its
+VPC provisioner says so in its source ("stack teardown leaves the VPC
+alone"). Real AWS CloudFormation deletes VPCs normally, so this only
+affects floci.
+
+**The fix: delete orphan VPCs after destroying.** A VPC is an *orphan* when
+it isn't a default VPC and no CloudFormation stack (nested stacks
+included) lists it as a resource. [`scripts/floci_prune.py`](scripts/floci_prune.py)
+finds them and, with `--apply`, deletes them (and anything still inside
+them):
+
+```bash
+uv run cdk destroy VpcStack
+uv run python scripts/floci_prune.py            # list orphan VPCs (dry run)
+uv run python scripts/floci_prune.py --apply    # delete them
+```
+
+Every module that creates a VPC has this line in its "Clean up" section.
+The script uses your current credentials' account (floci maps the access
+key to an account - see the enterprise example's README, section 9) and
+`AWS_DEFAULT_REGION`; pass `--region` once per region to check others. It
+refuses to run unless `AWS_ENDPOINT_URL` points at floci, so it can never
+touch a real AWS account. `make cdk-destroy` (section 5.6) destroys and
+then runs it for you; `make floci-prune` runs it on its own.
 
 ## 6. Network ports used
 
@@ -821,6 +908,36 @@ for the same reason.
   as actual Docker containers rather than lightweight mocks, which is more
   faithful but also means those modules need more RAM/CPU and take longer to
   start than, say, an S3 bucket or an SQS queue.
+- **CDK custom resources need two floci settings.** Several modules deploy
+  CDK-managed Lambda functions behind the scenes - custom resources such as
+  S3 `auto_delete_objects` (modules 12, 25, 32), EventBridge's log-group
+  policy (28), OpenSearch's access policy (23), and EKS's cluster provider
+  (16). [`docker-compose.yml`](docker-compose.yml) sets both settings
+  floci's own Compose file uses:
+  - `FLOCI_HOSTNAME: floci` - floci injects `AWS_ENDPOINT_URL=http://floci:4566`
+    into every Lambda container, so the handler's AWS API calls reach floci
+    ([floci - Lambda](https://floci.io/floci/services/lambda/), "Docker
+    Compose service names").
+  - `FLOCI_TLS_ENABLED: "true"` - the handler then reports its result to
+    CloudFormation's `ResponseURL`, but the CDK's handler code always uses
+    `https://` and drops the URL's port, so it connects to port 443. With
+    TLS on, floci also listens on 443 and the containers it starts trust
+    its certificate ([floci - TLS / HTTPS](https://floci.io/floci/configuration/tls/)).
+    Plain `http://localhost:4566` keeps working.
+
+  Without them, those deploys fail with `connect ECONNREFUSED <floci-ip>:443`.
+- **Secrets Manager references are written by secret name.** floci
+  resolves a `{{resolve:secretsmanager:...}}` dynamic reference only when it
+  is a plain string in the template - not the `Fn::Join` + `Ref` form the
+  CDK builds from a `Secret` object (floci fails with "Invalid Secrets
+  Manager dynamic reference"). The database modules (18, 19, 20, 45)
+  therefore create their master-password secret with a fixed name and pass
+  `SecretValue.secrets_manager(<name>, json_field="password")`, which works
+  identically on real AWS.
+- **floci's `cdk destroy` leaves VPCs behind** - see
+  [section 5.9](#59---cdk-destroy-on-floci-leaves-vpcs-behind).
+- **Some services are recorded, not run, by floci's CloudFormation** - see
+  the "Deploy with floci" section of modules 22, 45, and 46.
 - **Deploying to a real AWS account has real cost** for some modules (NAT
   Gateway, RDS, OpenSearch, EKS, ElastiCache, in particular - hourly
   charges start the moment the resource exists). Each such module's README
@@ -945,6 +1062,7 @@ unaffected - this only matters for **live preview**:
 - [mise - Getting started](https://mise.jdx.dev/getting-started.html) · [mise - Installing mise](https://mise.jdx.dev/installing-mise.html) · [mise - Registry](https://mise.jdx.dev/registry.html) (the `aws-cli` tool) · [aws/aws-cli releases](https://github.com/aws/aws-cli) · [Node.js releases](https://nodejs.org/en/about/previous-releases) · [npm/cli](https://github.com/npm/cli)
 - [AWS CDK v2 Developer Guide - Working with the AWS CDK in Python](https://docs.aws.amazon.com/cdk/v2/guide/work-with-cdk-python.html)
 - [AWS CDK v2 Developer Guide - Environments](https://docs.aws.amazon.com/cdk/v2/guide/environments.html)
+- [AWS CDK CLI reference - `cdk deploy` (`--method`)](https://docs.aws.amazon.com/cdk/v2/guide/ref-cli-cmd-deploy.html)
 - [AWS CDK v2 Developer Guide - AWS CDK bootstrapping](https://docs.aws.amazon.com/cdk/v2/guide/bootstrapping.html) · [Troubleshooting common AWS CDK issues](https://docs.aws.amazon.com/cdk/v2/guide/troubleshooting.html)
 - [AWS CDK v2 Developer Guide (home)](https://docs.aws.amazon.com/cdk/v2/guide/home.html)
 - [AWS CDK API Reference (Python)](https://docs.aws.amazon.com/cdk/api/v2/python/)

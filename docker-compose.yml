@@ -26,6 +26,24 @@ services:
       FLOCI_STORAGE_MODE: persistent
       # The floci-ui web console, served at http://localhost:4566/_floci/ui
       FLOCI_SERVICES_UI_ENABLED: "true"
+      # This service's Compose name. floci injects it into every Lambda
+      # container it starts as AWS_ENDPOINT_URL=http://floci:4566, so code
+      # running *inside* a Lambda - including the CDK's own custom-resource
+      # handlers, e.g. S3 auto_delete_objects in modules/12_s3 - reaches
+      # floci's APIs. See https://floci.io/floci/services/lambda/
+      # ("Docker Compose service names").
+      FLOCI_HOSTNAME: floci
+      # Serves HTTPS next to HTTP on 4566 (plain http://localhost:4566 keeps
+      # working) and, more importantly here, also listens on 443 inside the
+      # container (FLOCI_TLS_AWS_HTTPS_PORT, 443 by default). The CDK's
+      # custom-resource handlers send their result to CloudFormation's
+      # ResponseURL with https:// and *without its port* - so to
+      # https://floci:443 - and fail with "connect ECONNREFUSED
+      # <floci-ip>:443" unless floci answers there. Containers floci starts
+      # trust its local CA automatically (NODE_EXTRA_CA_CERTS etc.). floci's
+      # own docker-compose.yml sets this too. See
+      # https://floci.io/floci/configuration/tls/
+      FLOCI_TLS_ENABLED: "true"
     volumes:
       # Required so floci can run "real Docker" backends for services such as
       # ECS, EKS, RDS, and ElastiCache instead of shallow mocks.

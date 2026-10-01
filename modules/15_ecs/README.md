@@ -94,7 +94,7 @@ uv run pytest tests/unit/test_15_ecs.py -v
 eval $(floci env)
 uv run cdk bootstrap   # once per floci instance - safe to re-run; see REQUIREMENTS.md section 5.7
 uv run cdk synth EcsStack
-uv run cdk deploy EcsStack --require-approval never
+uv run cdk deploy EcsStack --require-approval never --method=direct
 ```
 
 ## Deploy to real AWS (optional)
@@ -131,6 +131,7 @@ in this repository's `docker-compose.yml`).
 
 ```bash
 uv run cdk destroy EcsStack
+uv run python scripts/floci_prune.py --apply   # floci only: deletes the empty VPC floci leaves behind (REQUIREMENTS.md section 5.9)
 ```
 
 ## Notes and cautions

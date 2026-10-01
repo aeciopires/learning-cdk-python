@@ -83,7 +83,7 @@ uv run pytest tests/unit/test_32_cloudfront.py -v
 eval $(floci env)
 uv run cdk bootstrap   # once per floci instance - safe to re-run; see REQUIREMENTS.md section 5.7
 uv run cdk synth CloudFrontStack
-uv run cdk deploy CloudFrontStack --require-approval never
+uv run cdk deploy CloudFrontStack --require-approval never --method=direct
 ```
 
 floci's CloudFront support may be more limited/less faithful than services

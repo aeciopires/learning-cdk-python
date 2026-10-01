@@ -55,3 +55,35 @@ def test_cluster_has_the_mandatory_tags(config):
         template.has_resource_properties(
             "AWS::RDS::DBCluster", {"Tags": Match.array_with([tag])}
         )
+
+
+def test_master_password_is_a_literal_reference_to_a_named_secret(config):
+    """floci only resolves a {{resolve:secretsmanager:...}} reference written as
+    a plain string - not the Fn::Join + Ref form CDK builds from a Secret
+    object - so the password must reference the secret by its fixed name."""
+    template = _synth(config)
+    secret_name = f"{config.product}-{config.environment}-secret-rds-aurora"
+    template.has_resource_properties(
+        "AWS::SecretsManager::Secret",
+        {
+            "Name": secret_name,
+            "GenerateSecretString": Match.object_like(
+                {"GenerateStringKey": "password", "SecretStringTemplate": Match.string_like_regexp("dbadmin")}
+            ),
+        },
+    )
+    template.has_resource_properties(
+        "AWS::RDS::DBCluster",
+        {
+            "MasterUsername": "dbadmin",
+            "MasterUserPassword": f"{{{{resolve:secretsmanager:{secret_name}:SecretString:password::}}}}",
+        },
+    )
+
+
+def test_database_waits_for_its_secret(config):
+    """A by-name reference has no implicit dependency on the secret."""
+    template = _synth(config)
+    secret_id = next(iter(template.find_resources("AWS::SecretsManager::Secret")))
+    database = next(iter(template.find_resources("AWS::RDS::DBCluster").values()))
+    assert secret_id in database["DependsOn"]

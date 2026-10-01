@@ -84,7 +84,7 @@ uv run pytest tests/unit/test_43_resource_group_tagging.py -v
 eval $(floci env)
 uv run cdk bootstrap   # once per floci instance - safe to re-run; see REQUIREMENTS.md section 5.7
 uv run cdk synth ResourceGroupTaggingStack
-uv run cdk deploy ResourceGroupTaggingStack --require-approval never
+uv run cdk deploy ResourceGroupTaggingStack --require-approval never --method=direct
 ```
 
 ## Deploy to real AWS (optional)

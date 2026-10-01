@@ -102,7 +102,7 @@ uv run pytest tests/unit/test_16_eks.py -v
 eval $(floci env)
 uv run cdk bootstrap   # once per floci instance - safe to re-run; see REQUIREMENTS.md section 5.7
 uv run cdk synth EksStack
-uv run cdk deploy EksStack --require-approval never
+uv run cdk deploy EksStack --require-approval never --method=direct
 ```
 
 ## Deploy to real AWS (optional, and costly)
@@ -146,6 +146,7 @@ kubectl get nodes   # expected: empty - default_capacity=0 means no nodes
 
 ```bash
 uv run cdk destroy EksStack
+uv run python scripts/floci_prune.py --apply   # floci only: deletes the empty VPC floci leaves behind (REQUIREMENTS.md section 5.9)
 ```
 
 Real-account cleanup can take several minutes - EKS control plane deletion

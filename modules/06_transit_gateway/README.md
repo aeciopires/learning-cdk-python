@@ -99,7 +99,7 @@ uv run pytest tests/unit/test_06_transit_gateway.py -v
 eval $(floci env)
 uv run cdk bootstrap   # once per floci instance - safe to re-run; see REQUIREMENTS.md section 5.7
 uv run cdk synth TransitGatewayStack
-uv run cdk deploy TransitGatewayStack --require-approval never
+uv run cdk deploy TransitGatewayStack --require-approval never --method=direct
 ```
 
 ## Deploy to real AWS (optional)
@@ -127,6 +127,7 @@ Transit Gateway's resources visually (see [`../../REQUIREMENTS.md`](../../REQUIR
 
 ```bash
 uv run cdk destroy TransitGatewayStack
+uv run python scripts/floci_prune.py --apply   # floci only: deletes the empty VPC floci leaves behind (REQUIREMENTS.md section 5.9)
 ```
 
 ## Notes and cautions

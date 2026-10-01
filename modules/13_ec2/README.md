@@ -31,9 +31,16 @@ grants access via AWS Systems Manager Session Manager - not SSH.
   security group, and an IAM role into a running virtual machine.
 - `ec2.InstanceType.of(InstanceClass, InstanceSize)` - how CDK expresses an
   instance type (e.g. `t3.micro`) as two enums instead of a raw string.
-- `ec2.MachineImage.latest_amazon_linux2023()` - always resolving the
-  *current* Amazon Linux 2023 AMI for the deployment region, instead of a
-  hardcoded, region-specific, eventually-stale AMI ID.
+- `ec2.MachineImage.resolve_ssm_parameter_at_launch(...)` - always using
+  the *current* Amazon Linux 2023 AMI for the deployment region, instead of
+  a hardcoded, region-specific, eventually-stale AMI ID. The template holds
+  `ImageId: resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64`
+  (an AWS-maintained public SSM parameter), and EC2 resolves it at launch.
+  The more common `latest_amazon_linux2023()` reads the same parameter
+  through a CloudFormation *parameter* instead, which makes the CDK CLI
+  redeploy the stack on every `cdk deploy` - on floci, launching a
+  duplicate instance each time (see
+  [`../../REQUIREMENTS.md`, section 5.8](../../REQUIREMENTS.md#58---re-running-cdk-deploy-on-floci-without-duplicating-resources)).
 - Why this module's security group has zero ingress rules, and how AWS
   Systems Manager Session Manager replaces SSH for reaching an instance -
   see [Notes and cautions](#notes-and-cautions).
@@ -86,7 +93,7 @@ uv run pytest tests/unit/test_13_ec2.py -v
 eval $(floci env)
 uv run cdk bootstrap   # once per floci instance - safe to re-run; see REQUIREMENTS.md section 5.7
 uv run cdk synth Ec2Stack
-uv run cdk deploy Ec2Stack --require-approval never
+uv run cdk deploy Ec2Stack --require-approval never --method=direct
 ```
 
 ## Deploy to real AWS (optional)
@@ -129,6 +136,7 @@ aws ssm start-session --target <instance-id>
 
 ```bash
 uv run cdk destroy Ec2Stack
+uv run python scripts/floci_prune.py --apply   # floci only: deletes the empty VPC floci leaves behind (REQUIREMENTS.md section 5.9)
 ```
 
 ## Notes and cautions

@@ -85,7 +85,7 @@ uv run pytest tests/unit/test_02_sts.py -v
 ```bash
 uv run cdk bootstrap   # once per floci instance - safe to re-run; see REQUIREMENTS.md section 5.7
 uv run cdk synth StsStack
-uv run cdk deploy StsStack --require-approval never
+uv run cdk deploy StsStack --require-approval never --method=direct
 ```
 
 ## Deploy to real AWS (optional)

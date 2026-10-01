@@ -59,7 +59,7 @@ family engine, bills hourly the moment it exists.
 | Amazon Aurora | `aws_cdk.aws_rds.DatabaseCluster` | L2 |
 | Amazon Aurora | `aws_cdk.aws_rds.ClusterInstance` | L2 (helper) |
 | Amazon Aurora | `aws_cdk.aws_rds.DatabaseClusterEngine`, `aws_cdk.aws_rds.AuroraPostgresEngineVersion` | L2 (helpers) |
-| Amazon Aurora / AWS Secrets Manager | `aws_cdk.aws_rds.Credentials` | L2 (helper) |
+| Amazon Aurora / AWS Secrets Manager | `aws_cdk.aws_rds.Credentials`, `aws_cdk.aws_secretsmanager.Secret`, `aws_cdk.SecretValue` | L2 (helper) |
 
 ## Prerequisites
 
@@ -89,7 +89,10 @@ check that: exactly one `AWS::RDS::DBCluster` and exactly one
 `db.t3.medium` with `PromotionTier: 0` (CloudFormation's marker for the
 writer), and every mandatory tag (see
 [`../../REQUIREMENTS.md`](../../REQUIREMENTS.md) section 7) is present on
-the cluster. They run in well under a second, with no Docker, no floci,
+the cluster. The tests also check that the master password is a literal
+`{{resolve:secretsmanager:learning-cdk-python-<env>-secret-rds-aurora:SecretString:password::}}`
+reference to a named, generated secret, and that the database depends on
+that secret (a by-name reference has no implicit dependency). They run in well under a second, with no Docker, no floci,
 and no AWS credentials:
 
 ```bash
@@ -104,7 +107,7 @@ uv run pytest tests/unit/test_20_rds_aurora.py -v
 eval $(floci env)
 uv run cdk bootstrap   # once per floci instance - safe to re-run; see REQUIREMENTS.md section 5.7
 uv run cdk synth RdsAuroraStack
-uv run cdk deploy RdsAuroraStack --require-approval never
+uv run cdk deploy RdsAuroraStack --require-approval never --method=direct
 ```
 
 ## Deploy to real AWS (optional)
@@ -135,6 +138,7 @@ cluster, its writer instance, and the generated secret visually.
 
 ```bash
 uv run cdk destroy RdsAuroraStack
+uv run python scripts/floci_prune.py --apply   # floci only: deletes the empty VPC floci leaves behind (REQUIREMENTS.md section 5.9)
 ```
 
 ## Notes and cautions
@@ -147,7 +151,7 @@ uv run cdk destroy RdsAuroraStack
   the pricing reference below and check current rates for your region
   before deploying to a real account.
 - **Master username:** this module uses
-  `rds.Credentials.from_generated_secret("dbadmin")`, not `"admin"`.
+  `"dbadmin"` (in its generated secret and `rds.Credentials.from_password()`), not `"admin"`.
   `cdk synth RdsAuroraStack` flags `"admin"` with a CloudFormation
   template-validation warning (not a hard error) -
   `MasterUsername: 'admin' must not be one of ['admin'] for a

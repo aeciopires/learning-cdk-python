@@ -14,6 +14,8 @@ from examples.enterprise_stack.core.resource_builder import ResourceBuilder, Res
 from shared.naming import resource_name
 from shared.tagging import apply_name_tag
 
+AL2023_AMI_PARAMETER = "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64"
+
 
 class Ec2ResourceBuilder(ResourceBuilder):
     key = "ec2"
@@ -52,7 +54,12 @@ class Ec2ResourceBuilder(ResourceBuilder):
             "AppInstance",
             instance_name=instance_name,
             instance_type=ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.MICRO),
-            machine_image=ec2.MachineImage.latest_amazon_linux2023(),
+            # Resolved by EC2 at launch, not via an SSM CloudFormation
+            # parameter, so an unchanged stack is skipped on re-deploy - see
+            # modules/13_ec2/stack.py for why.
+            machine_image=ec2.MachineImage.resolve_ssm_parameter_at_launch(
+                AL2023_AMI_PARAMETER, os=ec2.OperatingSystemType.LINUX
+            ),
             vpc=vpc,
             vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
             security_group=security_group,

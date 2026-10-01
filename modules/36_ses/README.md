@@ -81,7 +81,7 @@ uv run pytest tests/unit/test_36_ses.py -v
 eval $(floci env)
 uv run cdk bootstrap   # once per floci instance - safe to re-run; see REQUIREMENTS.md section 5.7
 uv run cdk synth SesStack
-uv run cdk deploy SesStack --require-approval never
+uv run cdk deploy SesStack --require-approval never --method=direct
 ```
 
 floci accepts the verification request immediately (there is no real inbox

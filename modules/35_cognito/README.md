@@ -89,7 +89,7 @@ uv run pytest tests/unit/test_35_cognito.py -v
 eval $(floci env)
 uv run cdk bootstrap   # once per floci instance - safe to re-run; see REQUIREMENTS.md section 5.7
 uv run cdk synth CognitoStack
-uv run cdk deploy CognitoStack --require-approval never
+uv run cdk deploy CognitoStack --require-approval never --method=direct
 ```
 
 ## Deploy to real AWS (optional)

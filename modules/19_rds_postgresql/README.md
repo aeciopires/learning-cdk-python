@@ -33,9 +33,10 @@ to it.
 ## What you will learn
 
 - The same RDS fundamentals as [module 18](../18_rds_mysql/README.md):
-  `aws_rds.DatabaseInstance`, the 2-AZ DB subnet group requirement, and
-  `rds.Credentials.from_generated_secret()` tying into Secrets Manager
-  (module 09).
+  `aws_rds.DatabaseInstance`, the 2-AZ DB subnet group requirement, and a
+  generated Secrets Manager password (module 09) passed by name as a
+  `{{resolve:secretsmanager:...}}` dynamic reference - see module 18 for
+  why it's by name.
 - Where PostgreSQL's engine/version selection differs in code from MySQL's:
   `rds.DatabaseInstanceEngine.postgres(version=rds.PostgresEngineVersion...)`
   instead of `.mysql(version=rds.MysqlEngineVersion...)` - same shape,
@@ -48,7 +49,7 @@ to it.
 | Amazon VPC | `aws_cdk.aws_ec2.Vpc` | L2 |
 | Amazon RDS | `aws_cdk.aws_rds.DatabaseInstance` | L2 |
 | Amazon RDS | `aws_cdk.aws_rds.DatabaseInstanceEngine`, `aws_cdk.aws_rds.PostgresEngineVersion` | L2 (helpers) |
-| Amazon RDS / AWS Secrets Manager | `aws_cdk.aws_rds.Credentials` | L2 (helper) |
+| Amazon RDS / AWS Secrets Manager | `aws_cdk.aws_rds.Credentials`, `aws_cdk.aws_secretsmanager.Secret`, `aws_cdk.SecretValue` | L2 (helper) |
 
 ## Prerequisites
 
@@ -72,7 +73,10 @@ check that: exactly one `AWS::RDS::DBInstance` is created, it uses the
 `postgres` engine at version `18.3`, `DeletionProtection` is `false` (so
 `cdk destroy` can remove it) and `PubliclyAccessible` is `false`, and every
 mandatory tag (see [`../../REQUIREMENTS.md`](../../REQUIREMENTS.md)
-section 7) is present on the instance. They run in well under a second,
+section 7) is present on the instance. The tests also check that the master password is a literal
+`{{resolve:secretsmanager:learning-cdk-python-<env>-secret-rds-postgresql:SecretString:password::}}`
+reference to a named, generated secret, and that the database depends on
+that secret (a by-name reference has no implicit dependency). They run in well under a second,
 with no Docker, no floci, and no AWS credentials:
 
 ```bash
@@ -87,7 +91,7 @@ uv run pytest tests/unit/test_19_rds_postgresql.py -v
 eval $(floci env)
 uv run cdk bootstrap   # once per floci instance - safe to re-run; see REQUIREMENTS.md section 5.7
 uv run cdk synth RdsPostgresqlStack
-uv run cdk deploy RdsPostgresqlStack --require-approval never
+uv run cdk deploy RdsPostgresqlStack --require-approval never --method=direct
 ```
 
 ## Deploy to real AWS (optional)
@@ -116,6 +120,7 @@ RDS instance and the generated secret visually.
 
 ```bash
 uv run cdk destroy RdsPostgresqlStack
+uv run python scripts/floci_prune.py --apply   # floci only: deletes the empty VPC floci leaves behind (REQUIREMENTS.md section 5.9)
 ```
 
 ## Notes and cautions
@@ -135,7 +140,7 @@ uv run cdk destroy RdsPostgresqlStack
   minimal property set this learning path teaches with; a production
   database should set `storage_encrypted=True`.
 - **Master username:** this module uses
-  `rds.Credentials.from_generated_secret("dbadmin")`, not `"admin"`.
+  `"dbadmin"` (in its generated secret and `rds.Credentials.from_password()`), not `"admin"`.
   `cdk synth`'s built-in CloudFormation template validation flags
   `"admin"` as a reserved master username for PostgreSQL-compatible
   engines (RDS PostgreSQL and Aurora PostgreSQL - see module 20), so this

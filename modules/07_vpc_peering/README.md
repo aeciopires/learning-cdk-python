@@ -84,7 +84,7 @@ uv run pytest tests/unit/test_07_vpc_peering.py -v
 eval $(floci env)
 uv run cdk bootstrap   # once per floci instance - safe to re-run; see REQUIREMENTS.md section 5.7
 uv run cdk synth VpcPeeringStack
-uv run cdk deploy VpcPeeringStack --require-approval never
+uv run cdk deploy VpcPeeringStack --require-approval never --method=direct
 ```
 
 ## Deploy to real AWS (optional)
@@ -111,6 +111,7 @@ VPCs' resources visually (see [`../../REQUIREMENTS.md`](../../REQUIREMENTS.md)).
 
 ```bash
 uv run cdk destroy VpcPeeringStack
+uv run python scripts/floci_prune.py --apply   # floci only: deletes the empty VPC floci leaves behind (REQUIREMENTS.md section 5.9)
 ```
 
 ## Notes and cautions

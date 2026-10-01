@@ -58,7 +58,8 @@ uv sync
 docker compose up -d floci
 cp .env.example .env && set -a; source .env; set +a
 uv run cdk list                       # see every module's stack id
-uv run cdk deploy IamStack --require-approval never   # deploy the first module
+uv run cdk bootstrap                  # once per floci instance (REQUIREMENTS.md section 5.7)
+uv run cdk deploy IamStack --require-approval never --method=direct   # deploy the first module
 uv run cdk destroy IamStack           # and clean it up when you're done
 ```
 

@@ -33,8 +33,16 @@ from examples.enterprise_stack.stack import EnterpriseCellStack
 from shared.config import load_app_config, validate_environment
 
 
-def _stack_id(cell_id: str) -> str:
-    return "EnterpriseCell" + "".join(part.capitalize() for part in cell_id.split("-")) + "Stack"
+def _stack_id(environment: str, cell_id: str) -> str:
+    """e.g. ("stg", "cell-01") -> "EnterpriseStgCell01Stack".
+
+    The environment is part of the id so dev, stg, and prd cells are
+    different CloudFormation stacks: with the cell id alone, every
+    environment's cell-01 would be the same stack, and deploying stg would
+    replace dev's cell-01 instead of adding a second one.
+    """
+    words = [environment, *cell_id.split("-")]
+    return "Enterprise" + "".join(word.capitalize() for word in words) + "Stack"
 
 
 def main() -> None:
@@ -49,7 +57,7 @@ def main() -> None:
         )
         EnterpriseCellStack(
             app,
-            _stack_id(cell.cell_id),
+            _stack_id(environment_name, cell.cell_id),
             config=cell_config,
             registry=registry,
             enabled_keys=set(cell.enabled_resources),

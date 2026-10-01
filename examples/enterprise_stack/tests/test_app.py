@@ -29,8 +29,15 @@ def _assembly(outdir: Path) -> cx_api.CloudAssembly:
     return cx_api.CloudAssembly(str(outdir))
 
 
-def test_stack_id_is_built_from_the_cell_id():
-    assert app._stack_id("cell-01") == "EnterpriseCellCell01Stack"
+def test_stack_id_is_built_from_the_environment_and_cell_id():
+    assert app._stack_id("stg", "cell-01") == "EnterpriseStgCell01Stack"
+
+
+def test_each_environment_gets_its_own_stack_ids():
+    """Same cell id, different environments -> different stacks, so
+    deploying one environment never replaces another's stack."""
+    ids = {app._stack_id(environment, "cell-01") for environment in ("dev", "stg", "prd")}
+    assert ids == {"EnterpriseDevCell01Stack", "EnterpriseStgCell01Stack", "EnterprisePrdCell01Stack"}
 
 
 def test_dev_is_the_default_environment(synth_dir, monkeypatch):
@@ -38,7 +45,7 @@ def test_dev_is_the_default_environment(synth_dir, monkeypatch):
 
     app.main()
 
-    assert [s.stack_name for s in _assembly(synth_dir).stacks] == ["EnterpriseCellCell01Stack"]
+    assert [s.stack_name for s in _assembly(synth_dir).stacks] == ["EnterpriseDevCell01Stack"]
 
 
 def test_selected_environment_sets_names_and_tags_not_cdk_environment(synth_dir, monkeypatch):
@@ -46,7 +53,7 @@ def test_selected_environment_sets_names_and_tags_not_cdk_environment(synth_dir,
 
     app.main()
 
-    template = _assembly(synth_dir).get_stack_by_name("EnterpriseCellCell01Stack").template
+    template = _assembly(synth_dir).get_stack_by_name("EnterpriseStgCell01Stack").template
     repository = next(
         r for r in template["Resources"].values() if r["Type"] == "AWS::ECR::Repository"
     )

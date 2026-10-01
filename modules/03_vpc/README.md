@@ -82,7 +82,7 @@ uv run pytest tests/unit/test_03_vpc.py -v
 eval $(floci env)
 uv run cdk bootstrap   # once per floci instance - safe to re-run; see REQUIREMENTS.md section 5.7
 uv run cdk synth VpcStack
-uv run cdk deploy VpcStack --require-approval never
+uv run cdk deploy VpcStack --require-approval never --method=direct
 ```
 
 ## Deploy to real AWS (optional)
@@ -114,6 +114,7 @@ for how the UI is enabled in this repository's `docker-compose.yml`).
 
 ```bash
 uv run cdk destroy VpcStack
+uv run python scripts/floci_prune.py --apply   # floci only: deletes the empty VPC floci leaves behind (REQUIREMENTS.md section 5.9)
 ```
 
 ## Notes and cautions

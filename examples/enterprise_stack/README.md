@@ -510,24 +510,67 @@ uv run cdk synth --app "uv run python examples/enterprise_stack/app.py"
 # against floci (see ../../REQUIREMENTS.md section 5), same as any module:
 docker compose up -d floci
 cp .env.example .env; set -a; source .env; set +a   # or export the 4 AWS_* vars by hand
-uv run cdk deploy --all --app "uv run python examples/enterprise_stack/app.py" --require-approval never
+uv run cdk bootstrap   # once per floci instance - see ../../REQUIREMENTS.md section 5.7
+uv run cdk deploy --all --app "uv run python examples/enterprise_stack/app.py" --require-approval never --method=direct
 uv run cdk destroy --all --app "uv run python examples/enterprise_stack/app.py"
+uv run python scripts/floci_prune.py --apply   # floci only: deletes the VPC floci leaves behind (../../REQUIREMENTS.md section 5.9)
 ```
+
+Each environment's cells are separate stacks, named
+`Enterprise<Environment><Cell>Stack`:
+
+| `ENTERPRISE_ENVIRONMENT` | Stacks | Account / region |
+|---|---|---|
+| `dev` | `EnterpriseDevCell01Stack` | whatever your credentials point at (environment-agnostic) |
+| `stg` | `EnterpriseStgCell01Stack` | whatever your credentials point at (environment-agnostic) |
+| `prd` | `EnterprisePrdCell01Stack`, `EnterprisePrdCell02Stack` | `111111111111` / `us-east-1` and `us-west-2` (from `prd.json`) |
+
+The environment is part of the stack id on purpose: with the cell id
+alone, `dev`'s and `stg`'s `cell-01` would be the *same* CloudFormation
+stack, and deploying one environment would replace the other's resources
+instead of adding its own.
+
+**`prd` on floci.** `prd.json` pins its cells to account `111111111111` in
+two regions. floci treats an access key id of exactly 12 digits as the
+account id ([floci - Multi-Account Isolation](https://floci.io/floci/configuration/multi-account/)),
+so using `111111111111` as the access key makes every call act as that
+account - fully isolated from the default `000000000000` one - and each
+region needs its own bootstrap:
+
+```bash
+export ENTERPRISE_ENVIRONMENT=prd AWS_ACCESS_KEY_ID=111111111111
+uv run cdk bootstrap aws://111111111111/us-east-1 aws://111111111111/us-west-2
+uv run cdk deploy --all --app "uv run python examples/enterprise_stack/app.py" --require-approval never --method=direct
+# to remove it again - prd's VPCs live in two regions:
+uv run cdk destroy --all --app "uv run python examples/enterprise_stack/app.py"
+uv run python scripts/floci_prune.py --region us-east-1 --region us-west-2 --apply
+```
+
+(On real AWS, replace the placeholder account in `prd.json` with yours and
+use real credentials for it instead.)
+
+**Re-running a deploy is safe.** With `--method=direct`, deploying an
+unchanged environment again reports `(no changes)` for every cell and
+creates nothing new - see
+[`../../REQUIREMENTS.md`, section 5.8](../../REQUIREMENTS.md#58---re-running-cdk-deploy-on-floci-without-duplicating-resources)
+for why the flag matters on floci.
 
 Once these commands are familiar, `make cdk-synth EXAMPLE=enterprise
 ENV=stg` and `make cdk-deploy EXAMPLE=enterprise ENV=stg` are optional
-shortcuts for them (they also start floci first, if it isn't running) - see
+shortcuts for them (they also start floci first, if it isn't running, and
+for `ENV=prd` they act as `prd.json`'s account and bootstrap its regions
+for you) - see
 [`../../REQUIREMENTS.md`, section 5.6](../../REQUIREMENTS.md#56---optional-make-shortcuts-for-floci-and-the-cdk).
 
-`dev` and `stg` synthesize cleanly with no AWS credentials at all
-(environment-agnostic, exactly like every `modules/NN_service` stack -
-see [`../../REQUIREMENTS.md`, section 9](../../REQUIREMENTS.md#9-flexible-account-and-region)) -
-`stg` in particular exercises the full `ecr` → `ecs` (autoscaling) →
-`alb`/`nlb` chain with no live AWS account needed at all, since none of
-those four resources require a synth-time account lookup. `prd.json`
-specifies explicit (placeholder) AWS account IDs, which makes `ec2` fail
-`cdk synth` without real credentials for that account (its AMI lookup
-does need one) - see [section 12](#12-known-limitations-and-honest-scope).
+All three environments synthesize with no AWS credentials at all. `dev`
+and `stg` are environment-agnostic, exactly like every
+`modules/NN_service` stack (see
+[`../../REQUIREMENTS.md`, section 9](../../REQUIREMENTS.md#9-flexible-account-and-region)),
+and `stg` in particular exercises the full `ecr` → `ecs` (autoscaling) →
+`alb`/`nlb` chain. `prd` names explicit accounts and regions, but nothing
+in it needs a synth-time lookup: the `ec2` builder's AMI is resolved by
+EC2 at launch (`resolve:ssm:`), not looked up while synthesizing - see
+[section 12](#12-known-limitations-and-honest-scope).
 
 ## 10. Tests
 
@@ -603,14 +646,13 @@ tags, and a long name like `staging` being rejected.
   optional next step, not as a module.
 - **`prd.json`'s explicit accounts are placeholders** (`111111111111`),
   not real AWS accounts - substitute your own before ever attempting a
-  real deploy. With that placeholder account and no matching AWS
-  credentials, `cdk synth` for `prd` fails specifically on `ec2`
-  (`ec2.MachineImage.latest_amazon_linux2023()` needs a live SSM Parameter
-  Store lookup against the target account at synthesis time - see
-  [AWS CDK - Environments](https://docs.aws.amazon.com/cdk/v2/guide/environments.html))
-  - this is standard, documented CDK behavior for a concretely-specified
-  environment, not a bug in this example. `dev`/`stg` never enable
-  `ec2`, so they synthesize with no credentials at all.
+  real deploy. On floci, the placeholder works as-is (see
+  [section 9](#9-running-it)). The `ec2` builder uses
+  `ec2.MachineImage.resolve_ssm_parameter_at_launch()`, so the AMI is
+  resolved by EC2 at launch rather than by an SSM lookup or an SSM-typed
+  template parameter - which keeps `prd` synthesizable without
+  credentials, and keeps a re-deploy of an unchanged cell a no-op (see
+  `modules/13_ec2/stack.py` for the details).
 - **The `iam` builder's S3 policy is ARN-by-convention, not a live
   reference** (same as `modules/01_iam/stack.py`) - it works whether or
   not `s3` is actually enabled for the cell, but a fuller implementation

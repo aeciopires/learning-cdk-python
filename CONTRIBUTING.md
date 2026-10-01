@@ -54,7 +54,7 @@ docker compose up -d floci       # local AWS emulator
 uv run ruff check .              # lint
 make typecheck                   # type-check (mypy) - see the Makefile for why it's not a single mypy call
 uv run cdk synth <StackId>       # validate a specific module synthesizes
-uv run cdk deploy <StackId> --require-approval never  # deploy it to floci
+uv run cdk deploy <StackId> --require-approval never --method=direct  # deploy it to floci (REQUIREMENTS.md 5.8)
 uv run cdk destroy <StackId>     # clean up
 uv run pytest tests/unit/test_NN_service.py -v  # that module's unit tests
 uv run pytest                    # every unit test in the repository
@@ -91,7 +91,7 @@ has one (see [`CLAUDE.md`, section 3, point 7](CLAUDE.md#3-the-module-contract))
 3. Create `modules/NN_service/` (next free number, zero-padded 2 digits) with
    `__init__.py`, `stack.py`, and `README.md`.
 4. Run `uv run cdk synth <StackId>` until it succeeds with no errors, then
-   `uv run cdk deploy <StackId> --require-approval never` against floci and
+   `uv run cdk deploy <StackId> --require-approval never --method=direct` against floci and
    confirm the resource(s) actually appear (`aws ... describe-...` or the
    floci UI at `http://localhost:4566/_floci/ui`), then `uv run cdk destroy
    <StackId>`.

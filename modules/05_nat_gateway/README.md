@@ -100,7 +100,7 @@ true.
 eval $(floci env)
 uv run cdk bootstrap   # once per floci instance - safe to re-run; see REQUIREMENTS.md section 5.7
 uv run cdk synth NatGatewayStack
-uv run cdk deploy NatGatewayStack --require-approval never
+uv run cdk deploy NatGatewayStack --require-approval never --method=direct
 ```
 
 ## Deploy to real AWS (optional)
@@ -128,6 +128,7 @@ VPC's resources visually (see [`../../REQUIREMENTS.md`](../../REQUIREMENTS.md)).
 
 ```bash
 uv run cdk destroy NatGatewayStack
+uv run python scripts/floci_prune.py --apply   # floci only: deletes the empty VPC floci leaves behind (REQUIREMENTS.md section 5.9)
 ```
 
 On real AWS, confirm in the console (VPC > NAT Gateways) that it actually

@@ -83,7 +83,7 @@ uv run pytest tests/unit/test_28_eventbridge.py -v
 eval $(floci env)
 uv run cdk bootstrap   # once per floci instance - safe to re-run; see REQUIREMENTS.md section 5.7
 uv run cdk synth EventBridgeStack
-uv run cdk deploy EventBridgeStack --require-approval never
+uv run cdk deploy EventBridgeStack --require-approval never --method=direct
 ```
 
 ## Deploy to real AWS (optional)

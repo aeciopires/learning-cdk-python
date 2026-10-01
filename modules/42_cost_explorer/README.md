@@ -96,7 +96,7 @@ uv run pytest tests/unit/test_42_cost_explorer.py -v
 eval $(floci env)
 uv run cdk bootstrap   # once per floci instance - safe to re-run; see REQUIREMENTS.md section 5.7
 uv run cdk synth CostExplorerStack
-uv run cdk deploy CostExplorerStack --require-approval never
+uv run cdk deploy CostExplorerStack --require-approval never --method=direct
 ```
 
 ## Deploy to real AWS (optional)

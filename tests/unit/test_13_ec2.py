@@ -65,3 +65,20 @@ def test_instance_has_the_mandatory_tags(config):
         template.has_resource_properties(
             "AWS::EC2::Instance", {"Tags": Match.array_with([tag])}
         )
+
+
+def test_ami_is_resolved_at_launch_not_through_an_ssm_template_parameter(config):
+    """An SSM-typed template parameter makes `cdk deploy` redeploy the stack
+    every time (duplicating the instance on floci); `resolve:ssm:` doesn't."""
+    template = _synth(config)
+    template.has_resource_properties(
+        "AWS::EC2::Instance",
+        {"ImageId": "resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64"},
+    )
+    parameters = template.to_json().get("Parameters", {})
+    ssm_parameters = [
+        name
+        for name, parameter in parameters.items()
+        if parameter["Type"].startswith("AWS::SSM::Parameter") and name != "BootstrapVersion"
+    ]
+    assert ssm_parameters == []
