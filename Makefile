@@ -42,14 +42,16 @@ FLOCI_IMAGE := floci/floci:latest
 ifeq ($(EXAMPLE),enterprise)
   CDK_APP := --app "uv run python examples/enterprise_stack/app.py"
   CDK_ENV := ENTERPRISE_ENVIRONMENT=$(ENV)
+  # The regions an environment file pins its cells to (prd.json: two), so
+  # floci-prune and cdk-resources check each one.
+  ENV_REGIONS := $(shell python3 -c "import json; f='examples/enterprise_stack/environments/$(ENV).json'; print(*sorted({c['region'] for c in json.load(open(f))['cells'] if c.get('region')}))" 2>/dev/null)
   # An environment file that pins its cells to an explicit account (prd.json
   # does) is deployed to floci *as* that account: floci treats a 12-digit
   # access key id as the account id (examples/enterprise_stack/README.md,
   # section 9). Read from the JSON file, so it's never repeated here.
-  # The regions an environment file pins its cells to (prd.json: two), so
-  # floci-prune checks each one after cdk-destroy.
-  ENV_REGIONS := $(shell python3 -c "import json; f='examples/enterprise_stack/environments/$(ENV).json'; print(*sorted({c['region'] for c in json.load(open(f))['cells'] if c.get('region')}))" 2>/dev/null)
   ENV_ACCOUNT := $(shell python3 -c "import json,sys; f='examples/enterprise_stack/environments/$(ENV).json'; a={c['account'] for c in json.load(open(f))['cells'] if c.get('account')}; print(*a) if len(a)==1 else None" 2>/dev/null)
+  # This environment's cells are the stacks named Enterprise<Env>... (app.py).
+  ENV_STACK_PREFIX := Enterprise$(shell echo '$(ENV)' | sed 's/^./\U&/')
 else ifeq ($(EXAMPLE),)
   CDK_APP :=
   CDK_ENV :=
@@ -61,7 +63,7 @@ endif
 # same command REQUIREMENTS.md section 0, step 6 runs by hand.
 LOAD_ENV := set -a; source $(ENV_FILE); set +a; $(if $(ENV_ACCOUNT),export AWS_ACCESS_KEY_ID=$(ENV_ACCOUNT);)
 
-.PHONY: help check typecheck coverage cdk-synth cdk-deploy cdk-destroy \
+.PHONY: help check typecheck coverage cdk-synth cdk-diff cdk-deploy cdk-destroy cdk-resources \
 	floci-start floci-stop floci-status floci-destroy floci-prune
 
 help: ## Show this list of targets
@@ -82,7 +84,7 @@ check: ## Check your OS + every required/recommended/optional tool (see REQUIREM
 typecheck: ## Type-check shared/, app.py, every module's stack.py, and examples/ with mypy
 	@uv run mypy shared app.py
 	@uv run mypy --explicit-package-bases examples/enterprise_stack
-	@uv run mypy scripts/floci_prune.py
+	@uv run mypy scripts/floci_prune.py scripts/resource_commands.py
 	@set -e; for dir in modules/*/; do \
 		[ -f "$${dir}stack.py" ] || continue; \
 		echo "mypy $${dir}stack.py"; \
@@ -153,6 +155,18 @@ floci-destroy: ## Remove floci, its consoles, and ALL deployed local resources (
 		echo "Deleted ./.floci (all local floci data)."; \
 	fi
 
+# Runs the same `aws` commands each README's "List every resource with the
+# AWS CLI" section shows, against the deployed stack(s) - read-only, so it
+# is safe to repeat. A shortcut, not a replacement for those commands; see
+# REQUIREMENTS.md section 5.10.
+cdk-resources: ## List every resource a deployed stack created, via the AWS CLI (STACK=VpcStack, STACK=all, or EXAMPLE=enterprise ENV=...); read-only
+	@if [ -z "$(EXAMPLE)" ] && [ -z "$(STACK)" ]; then \
+		echo "Pick what to list: make cdk-resources STACK=VpcStack, STACK=all, or EXAMPLE=enterprise ENV=dev|stg|prd." >&2; exit 1; \
+	fi
+	@$(MAKE) --no-print-directory floci-status
+	@$(MAKE) --no-print-directory floci-start
+	$(LOAD_ENV) $(CDK_ENV) uv run python scripts/resource_commands.py $(if $(EXAMPLE),--all --prefix $(ENV_STACK_PREFIX) $(foreach r,$(ENV_REGIONS),--region $(r)),$(if $(filter-out all,$(STACK)),$(STACK),--all))
+
 # floci's CloudFormation never deletes AWS::EC2::VPC resources on stack
 # deletion, so every `cdk destroy` of a stack with a VPC leaves an empty VPC
 # behind - see REQUIREMENTS.md section 5.9. This lists (or, with APPLY=yes,
@@ -171,6 +185,13 @@ cdk-synth: ## Synthesize one stack (STACK=VpcStack), every stack, or EXAMPLE=ent
 	@$(MAKE) --no-print-directory floci-status
 	@$(MAKE) --no-print-directory floci-start
 	$(LOAD_ENV) $(CDK_ENV) uv run cdk synth $(CDK_APP) $(if $(STACK),$(STACK),--all --quiet)
+
+# `cdk diff` compares what `cdk synth` would produce now with what's deployed,
+# and changes nothing - see REQUIREMENTS.md section 5.11.
+cdk-diff: ## Show what cdk deploy would change (STACK=VpcStack, every stack, or EXAMPLE=enterprise ENV=...); changes nothing
+	@$(MAKE) --no-print-directory floci-status
+	@$(MAKE) --no-print-directory floci-start
+	$(LOAD_ENV) $(CDK_ENV) uv run cdk diff $(CDK_APP) $(if $(filter-out all,$(STACK)),$(STACK),--all)
 
 cdk-deploy: ## Deploy to floci: STACK=VpcStack, STACK=all, or EXAMPLE=enterprise ENV=dev|stg|prd
 	@if [ -z "$(EXAMPLE)" ] && [ -z "$(STACK)" ]; then \

@@ -461,7 +461,7 @@ uv run cdk --version              # confirms the CDK Toolkit is reachable throug
   </div>
   <div class="col dark">
     <h4>🚀 <code>cdk deploy</code> / <code>cdk destroy</code></h4>
-    <p>The only commands that talk to an actual endpoint — <code>http://localhost:4566</code> (floci) when <code>AWS_ENDPOINT_URL</code> is set, or a real AWS account/region otherwise.</p>
+    <p>The commands that change an actual endpoint — <code>http://localhost:4566</code> (floci) when <code>AWS_ENDPOINT_URL</code> is set, or a real AWS account/region otherwise. <code>cdk diff</code> reads the same endpoint to show what a deploy <em>would</em> change, and changes nothing.</p>
   </div>
 </div>
 
@@ -469,6 +469,7 @@ uv run cdk --version              # confirms the CDK Toolkit is reachable throug
 uv run cdk list                                          # every module's stack id
 uv run cdk bootstrap                                     # once per floci / AWS account+region
 uv run cdk synth VpcStack                                 # safe, local, no endpoint call
+uv run cdk diff VpcStack                                  # what deploy would change — changes nothing
 uv run cdk deploy VpcStack --require-approval never --method=direct  # creates resources (floci by default)
 uv run cdk destroy VpcStack                                # tears them back down
 ```
@@ -489,7 +490,7 @@ make check                               # OS + every required/recommended/optio
 ```
 
 <div class="stats">
-  <div class="stat"><span class="num">322</span><span class="label">tests in 57 files — every module (incl. 44's boto3 script), shared/, app.py, and the enterprise example</span></div>
+  <div class="stat"><span class="num">348</span><span class="label">tests in 58 files — every module (incl. 44's boto3 script), shared/, app.py, and the enterprise example</span></div>
   <div class="stat"><span class="num">100%</span><span class="label">line + branch coverage — goal 100%, minimum accepted 80%</span></div>
   <div class="stat"><span class="num">~5s</span><span class="label">to run everything — pure in-memory CloudFormation assertions</span></div>
 </div>
@@ -506,6 +507,8 @@ make floci-status                     # is it running? which URLs?
 make cdk-synth STACK=VpcStack         # = uv run cdk synth VpcStack
 make cdk-deploy STACK=SqsStack        # = cdk bootstrap + cdk deploy SqsStack --method=direct
 make cdk-synth EXAMPLE=enterprise ENV=stg
+make cdk-diff STACK=SqsStack          # = uv run cdk diff SqsStack
+make cdk-resources STACK=SqsStack     # run the README's AWS CLI listing commands (read-only)
 make cdk-destroy STACK=SqsStack       # = cdk destroy + delete the VPCs floci leaves behind
 make floci-stop                       # pause - deployed resources are kept
 make floci-destroy                    # wipe floci and everything deployed to it (asks first)
@@ -792,12 +795,13 @@ cp .env.example .env; set -a; source .env; set +a
 uv run cdk list                                            # see every module's stack id
 uv run cdk bootstrap                                       # once per floci (else: SsmParameterNotFound)
 uv run cdk synth VpcStack                                   # preview the CloudFormation template
+uv run cdk diff VpcStack                                    # what the deploy would change
 uv run cdk deploy VpcStack --require-approval never --method=direct  # create the resources, against floci
 uv run cdk destroy VpcStack                                   # clean up when you're done
 ```
 
 Verify what got created through the floci console at
-`http://localhost:4566/_floci/ui`, or with the AWS CLI pointed at the same endpoint.
+`http://localhost:4566/_floci/ui`, or with the AWS CLI: every module README lists one command per resource ("List every resource with the AWS CLI").
 
 ---
 

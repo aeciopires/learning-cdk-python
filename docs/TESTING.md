@@ -83,6 +83,7 @@ tests/
     ├── test_44_resource_quotas.py  # module 44's boto3 script.py - see below
     ├── test_app.py          # the root app.py: finds every module's stack
     ├── test_floci_prune.py  # scripts/floci_prune.py (botocore Stubber, like test_44)
+    ├── test_resource_commands.py  # scripts/resource_commands.py (README AWS CLI commands)
     └── test_shared_*.py     # shared/config.py, naming.py, tagging.py
 ```
 

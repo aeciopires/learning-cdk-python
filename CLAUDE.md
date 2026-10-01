@@ -66,7 +66,8 @@ whenever one is edited.
 ├── Makefile                 # optional shortcuts: check, typecheck, coverage, floci-*, cdk-synth/cdk-deploy - REQUIREMENTS.md sections 3.4 and 5.6
 ├── scripts/
 │   ├── check-deps.sh          # what `make check` runs - OS + every tool in REQUIREMENTS.md section 3
-│   └── floci_prune.py         # floci-only: deletes the VPCs `cdk destroy` leaves behind - REQUIREMENTS.md section 5.9
+│   ├── floci_prune.py         # floci-only: deletes the VPCs `cdk destroy` leaves behind - REQUIREMENTS.md section 5.9
+│   └── resource_commands.py   # generates each README's "List every resource" AWS CLI commands; runs them for `make cdk-resources` - REQUIREMENTS.md section 5.10
 ├── shared/                  # tagging.py, naming.py, config.py - see section 5 and 6
 ├── docs/
 │   ├── LEARNING-PATH.md    # the full 46-module table, grouped into 11 phases
@@ -92,6 +93,7 @@ whenever one is edited.
     └── unit/
         ├── test_NN_service.py  # one per module (44: tests script.py) - mandatory, see section 3 point 7
         ├── test_app.py          # the root app.py's module discovery
+        ├── test_floci_prune.py / test_resource_commands.py  # the two scripts/ tools
         └── test_shared_*.py     # shared/config.py, naming.py, tagging.py
 ```
 
@@ -149,7 +151,21 @@ for why it is not a 45th module.
    keeps the default change-set method. A module that creates a VPC also
    has `uv run python scripts/floci_prune.py --apply` in its "Clean up"
    section, right after `cdk destroy` - floci never deletes VPCs
-   (`REQUIREMENTS.md` section 5.9).
+   (`REQUIREMENTS.md` section 5.9). Both deploy sections also run
+   `uv run cdk diff <StackId>` before `cdk deploy` (`REQUIREMENTS.md`
+   section 5.11). The "Verify" section ends with a generated
+   **"List every resource with the AWS CLI"** subsection, between
+   `<!-- BEGIN resource-commands ... -->` / `<!-- END resource-commands -->`
+   markers, plus its TOC entry: synthesize the stack, run
+   `uv run python scripts/resource_commands.py --markdown <StackId> --template cdk.out/<StackId>.template.json`,
+   and paste its output there (copy the intro paragraph from any existing
+   module) - never hand-write those commands. Then deploy to floci and run
+   `make cdk-resources STACK=<StackId>`: every line must be `ok` (or `~~`,
+   a known floci gap - add a new resource type to `HANDLERS` in that
+   script, with a test, if it isn't covered). The same applies to the
+   enterprise example's section 9.1 when a builder is added. Hand-written
+   `aws` commands elsewhere in a README never filter EC2 resources by tag
+   (floci doesn't keep EC2 tags) - look ids up through the stack instead.
 7. A `tests/unit/test_NN_service.py` file (same numbering as the module
    directory) that builds the stack with the shared `config` fixture and
    asserts on its synthesized template via `aws_cdk.assertions` - see
@@ -340,9 +356,9 @@ renamed, or removed, re-check every anchor link in that file.
 4. **Validate it actually synthesizes**: `uv run cdk synth <StackId>` must
    succeed with no errors. Where Docker is available, `docker compose up -d
    floci`, `uv run cdk bootstrap` (once per floci instance), then
-   `uv run cdk deploy <StackId> --require-approval never --method=direct`
-   followed by `uv run cdk destroy <StackId> -f` is the full round-trip
-   check.
+   `uv run cdk diff <StackId>`, `uv run cdk deploy <StackId> --require-approval never --method=direct`,
+   `make cdk-resources STACK=<StackId>` (every resource found), then
+   `uv run cdk destroy <StackId> -f` is the full round-trip check.
 5. **Write and run its unit tests**: `uv run pytest tests/unit/test_NN_service.py -v`
    must pass - see point 7 of [section 3](#3-the-module-contract) and
    [`docs/TESTING.md`](docs/TESTING.md). Write the test *before* declaring

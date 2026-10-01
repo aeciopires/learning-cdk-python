@@ -20,6 +20,8 @@
     - [5.7 - Bootstrapping the CDK (once per floci instance or AWS account/region)](#57---bootstrapping-the-cdk-once-per-floci-instance-or-aws-accountregion)
     - [5.8 - Re-running `cdk deploy` on floci without duplicating resources](#58---re-running-cdk-deploy-on-floci-without-duplicating-resources)
     - [5.9 - `cdk destroy` on floci leaves VPCs behind](#59---cdk-destroy-on-floci-leaves-vpcs-behind)
+    - [5.10 - Listing every resource a stack created](#510---listing-every-resource-a-stack-created)
+    - [5.11 - Previewing changes with `cdk diff`](#511---previewing-changes-with-cdk-diff)
   - [6. Network ports used](#6-network-ports-used)
   - [7. Tagging policy](#7-tagging-policy)
   - [8. Naming policy](#8-naming-policy)
@@ -62,6 +64,11 @@ magic incantations to copy-paste:
   CloudFormation template, on your machine, without creating anything. It
   is the safe, free command you run constantly while learning - it cannot
   cost money or touch a real account.
+- **`cdk diff`** compares what `cdk synth` would produce *now* with what is
+  already deployed, and prints the difference - resources that would be
+  added (`[+]`), removed (`[-]`), or changed (`[~]`). Like `cdk synth`, it
+  changes nothing; run it before every `cdk deploy` to see what the deploy
+  is about to do (section 5.11).
 - **`cdk deploy`** actually creates (or updates) the resources - against
   floci (free, local, see below) or a real AWS account, depending on which
   one your terminal is currently pointed at.
@@ -676,6 +683,8 @@ requires them.
 | `make floci-stop` | stops floci and any console, keeping every deployed resource | `docker compose --profile floci-ui --profile floci-dash stop` |
 | `make floci-destroy` | removes floci, its consoles, **and every resource deployed to it** (`./.floci/`) - asks you to type `yes` first (`CONFIRM=yes` skips the question) | `docker compose ... down` + deleting `./.floci/` |
 | `make cdk-destroy STACK=VpcStack` | destroys one stack (or `STACK=all`, or `EXAMPLE=enterprise ENV=...`) from floci, then deletes the VPCs floci leaves behind (section 5.9) | `uv run cdk destroy VpcStack` + `uv run python scripts/floci_prune.py --apply` |
+| `make cdk-diff STACK=SqsStack` | shows what a deploy would change, without changing anything (section 5.11); no `STACK` = every stack, or `EXAMPLE=enterprise ENV=...` | `uv run cdk diff SqsStack` |
+| `make cdk-resources STACK=SqsStack` | runs every "List every resource with the AWS CLI" command for that stack (or `STACK=all`, or `EXAMPLE=enterprise ENV=...`) and reports what each found - read-only (section 5.10) | the README section's commands, one by one |
 | `make floci-prune` | lists the VPCs floci left behind after `cdk destroy`; `APPLY=yes` deletes them (section 5.9) | `uv run python scripts/floci_prune.py [--apply]` |
 | `make cdk-synth STACK=VpcStack` | synthesizes one module's stack (no `STACK` = every stack) | `uv run cdk synth VpcStack` |
 | `make cdk-synth EXAMPLE=enterprise ENV=stg` | synthesizes the [enterprise example](examples/enterprise_stack/README.md) for `dev`, `stg`, or `prd` | `ENTERPRISE_ENVIRONMENT=stg uv run cdk synth --app "uv run python examples/enterprise_stack/app.py"` |
@@ -842,6 +851,81 @@ refuses to run unless `AWS_ENDPOINT_URL` points at floci, so it can never
 touch a real AWS account. `make cdk-destroy` (section 5.6) destroys and
 then runs it for you; `make floci-prune` runs it on its own.
 
+### 5.10 - Listing every resource a stack created
+
+`cdk deploy` printing ✅ means CloudFormation reports success - not that you
+have looked at what it built. Every module README (and the enterprise
+example's, section 9.1) has a **"List every resource with the AWS CLI"**
+section: one `aws` command per resource the stack creates, so you can see
+each one with the same tool you'd use on a real account. The commands are:
+
+- **Parametrized** - set `PRODUCT` and `ENV` (your `CDK_PRODUCT` /
+  `CDK_ENVIRONMENT`), `REGION`, and - where a command builds an ARN -
+  `ACCOUNT` once at the top; names built by `shared/naming.py` become
+  `${PRODUCT}-${ENV}-...`, so the same block works for `dev`, `stg`, or
+  `prd`.
+- **Looked up through the stack when a resource has no name of its own** (a
+  VPC, a subnet, a KMS key, ...): `pid <LogicalId>` asks CloudFormation for
+  the physical id of the stack resource with that logical id, which is the
+  same in every environment. EC2 resources are never filtered by tag: floci
+  doesn't keep EC2 tags, so a tag filter finds nothing there.
+- **Generated, not hand-written** - from the stack's template, by
+  [`scripts/resource_commands.py`](scripts/resource_commands.py), between
+  `<!-- BEGIN resource-commands -->` / `<!-- END resource-commands -->`
+  markers. To (re)generate one after changing a stack:
+
+  ```bash
+  uv run cdk synth VpcStack -o cdk.out
+  uv run python scripts/resource_commands.py --markdown VpcStack --template cdk.out/VpcStack.template.json
+  ```
+
+  and paste the output between the markers (CLAUDE.md, section 3, point 6).
+
+`make cdk-resources STACK=VpcStack` (or `STACK=all`, or `EXAMPLE=enterprise
+ENV=prd`) runs the very same commands against what's deployed and reports
+which ones found their resource - a read-only shortcut, safe to repeat; the
+README commands remain the reference. Checked while writing this: across
+every module and all enterprise cells, every command found its resource
+except the floci gaps listed in [section 10](#10-observations-and-limitations),
+which `make cdk-resources` marks with `~~`.
+
+### 5.11 - Previewing changes with `cdk diff`
+
+`cdk diff` answers "what would `cdk deploy` change?" without changing
+anything. It synthesizes your app, compares each stack's template with the
+one CloudFormation has deployed, and prints the differences
+([`cdk diff` reference](https://docs.aws.amazon.com/cdk/v2/guide/ref-cli-cmd-diff.html)):
+
+```bash
+uv run cdk diff SqsStack     # one stack
+uv run cdk diff              # every stack in the app
+```
+
+| Symbol | Meaning |
+|---|---|
+| `[+]` | added if you deploy |
+| `[-]` | removed if you deploy |
+| `[~]` | modified - for some properties an in-place update, for others (e.g. a name) a full replacement |
+
+`There were no differences` means a deploy would do nothing - which is also
+why `cdk deploy --method=direct` skips an unchanged stack (section 5.8).
+Two details worth knowing:
+
+- **It needs the deployed stack to compare with** - for floci, floci must be
+  running and your `.env` loaded; a never-deployed stack shows every
+  resource as `[+]`.
+- **How it computes the diff** (`--method`): by default (`auto`) the CDK
+  creates a read-only CloudFormation change set to report replacements
+  accurately, and falls back to comparing templates if it can't. floci
+  can't create that read-only change set, so on floci you'll see "Could
+  not create a change set, will base the diff on template differences" -
+  harmless (checked while writing this: nothing is created or changed).
+  `--method=template` skips the attempt. `--fail` exits with code 1 when
+  there are differences (useful in CI).
+
+`make cdk-diff STACK=SqsStack` (or `EXAMPLE=enterprise ENV=stg`) is the
+shortcut (section 5.6).
+
 ## 6. Network ports used
 
 | Port | Service | Note |
@@ -936,8 +1020,27 @@ for the same reason.
   identically on real AWS.
 - **floci's `cdk destroy` leaves VPCs behind** - see
   [section 5.9](#59---cdk-destroy-on-floci-leaves-vpcs-behind).
-- **Some services are recorded, not run, by floci's CloudFormation** - see
-  the "Deploy with floci" section of modules 22, 45, and 46.
+- **Some resources are recorded, not created, by floci's CloudFormation.**
+  floci 2.1.0 (the current `floci/floci:latest` image, checked while writing
+  this) reports these types as `CREATE_COMPLETE` but logs each as
+  unsupported and creates nothing, so the AWS CLI finds nothing:
+  `AWS::ApplicationAutoScaling::ScalableTarget`/`ScalingPolicy` (enterprise
+  `stg`/`prd`), `AWS::Athena::WorkGroup` (25), `AWS::Backup::BackupPlan`
+  (41), `AWS::CE::AnomalyMonitor`/`AnomalySubscription` (42),
+  `AWS::DocDB::*` (45), `AWS::EC2::TransitGateway*` (06),
+  `AWS::EC2::VPCPeeringConnection` (07), `AWS::ElastiCache::*` (22),
+  `AWS::GuardDuty::Detector` (38), `AWS::MSK::Cluster` (46),
+  `AWS::OpenSearchService::Domain` (23), `AWS::ResourceGroups::Group` (43 -
+  floci implements no Resource Groups API at all), `AWS::Route53::RecordSet`
+  (33), and `AWS::SES::EmailIdentity` (36). Each module's generated
+  resource-listing section says which of its resources this affects. Also:
+  S3 buckets are created without their `AWS::S3::BucketPolicy` and
+  `PublicAccessBlockConfiguration` (12, 32), EC2 resources don't keep their
+  tags, and `aws logs describe-metric-filters` isn't implemented (39).
+  floci's unreleased main branch already provisions several of these -
+  re-check with each new floci release. Everything else in this repository
+  (353 resources across every module and enterprise cell, at the time of
+  writing) is created for real.
 - **Deploying to a real AWS account has real cost** for some modules (NAT
   Gateway, RDS, OpenSearch, EKS, ElastiCache, in particular - hourly
   charges start the moment the resource exists). Each such module's README

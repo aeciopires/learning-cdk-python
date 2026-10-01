@@ -229,6 +229,27 @@ written in English by convention.
 - `docs/LEARNING-PATH.md` and `CLAUDE.md`: new modules take the next free
   number and are listed in the phase they belong to; existing modules are
   never renumbered.
+- **"List every resource with the AWS CLI"** in every module README (and
+  section 9.1 of the enterprise example's, one block per environment/cell):
+  one `aws` command per resource the stack creates, parametrized by
+  environment (`ENV`), region (`REGION`), and - where an ARN is built -
+  account (`ACCOUNT`); unnamed resources are found through the stack by
+  logical id. Generated from each stack's template by the new
+  `scripts/resource_commands.py` (`--markdown`), between
+  `<!-- BEGIN/END resource-commands -->` markers; `CLAUDE.md` (section 3,
+  point 6) and `CONTRIBUTING.md` require it for new modules.
+  `REQUIREMENTS.md` section 5.10 explains it.
+- `make cdk-resources STACK=<StackId>|all` / `EXAMPLE=enterprise ENV=...`:
+  runs those same commands against the deployed stack(s) and reports what
+  each found - read-only, safe to repeat; a shortcut, not a replacement.
+- `cdk diff`: explained in `REQUIREMENTS.md` (section 0's concepts and a new
+  section 5.11 - what it compares, the `[+]`/`[-]`/`[~]` symbols, `--method`,
+  `--fail`, and floci's harmless "Could not create a change set" fallback);
+  added before `cdk deploy` in every module's floci and real-AWS deploy
+  commands, the enterprise example, `CONTRIBUTING.md`, and both slide decks;
+  `make cdk-diff`.
+- Tests: `tests/unit/test_resource_commands.py` (26 tests, every resource
+  type in the repository); still 100% coverage (348 tests).
 
 ### Changed
 
@@ -447,3 +468,13 @@ written in English by convention.
 - Tests for each fix; the repository stays at 100% coverage (322 tests).
 - `CLAUDE.md` and `REQUIREMENTS.md` section 10 document the rules these
   fixes follow (`--method=direct` on floci, secrets referenced by name).
+- Every module stack and every enterprise cell (dev, stg, both prd cells)
+  was deployed to a fresh floci (with floci-dash), and every README command
+  was run against it: all 353 resources were found except floci 2.1.0's
+  known gaps, now listed in `REQUIREMENTS.md` section 10 and noted in each
+  affected module's generated section.
+- Modules 03, 06, 07: their "Verify" commands filtered EC2 resources by the
+  `Name` tag, which finds nothing on floci (it doesn't keep EC2 tags); they
+  now look ids up through the stack.
+- Modules 12, 32: documented that floci 2.1.0 doesn't apply S3 bucket
+  policies or public-access blocks from CloudFormation.

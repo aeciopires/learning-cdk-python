@@ -54,7 +54,9 @@ docker compose up -d floci       # local AWS emulator
 uv run ruff check .              # lint
 make typecheck                   # type-check (mypy) - see the Makefile for why it's not a single mypy call
 uv run cdk synth <StackId>       # validate a specific module synthesizes
+uv run cdk diff <StackId>        # what a deploy would change - changes nothing (REQUIREMENTS.md 5.11)
 uv run cdk deploy <StackId> --require-approval never --method=direct  # deploy it to floci (REQUIREMENTS.md 5.8)
+make cdk-resources STACK=<StackId>  # every resource it created, via the README's AWS CLI commands (REQUIREMENTS.md 5.10)
 uv run cdk destroy <StackId>     # clean up
 uv run pytest tests/unit/test_NN_service.py -v  # that module's unit tests
 uv run pytest                    # every unit test in the repository
@@ -91,10 +93,15 @@ has one (see [`CLAUDE.md`, section 3, point 7](CLAUDE.md#3-the-module-contract))
 3. Create `modules/NN_service/` (next free number, zero-padded 2 digits) with
    `__init__.py`, `stack.py`, and `README.md`.
 4. Run `uv run cdk synth <StackId>` until it succeeds with no errors, then
-   `uv run cdk deploy <StackId> --require-approval never --method=direct` against floci and
-   confirm the resource(s) actually appear (`aws ... describe-...` or the
-   floci UI at `http://localhost:4566/_floci/ui`), then `uv run cdk destroy
-   <StackId>`.
+   `uv run cdk diff <StackId>` (what the deploy will create) and
+   `uv run cdk deploy <StackId> --require-approval never --method=direct` against floci.
+   Generate the README's "List every resource with the AWS CLI" section
+   with `scripts/resource_commands.py --markdown` (see
+   [`REQUIREMENTS.md`, section 5.10](REQUIREMENTS.md#510---listing-every-resource-a-stack-created)
+   and [`CLAUDE.md`, section 3](CLAUDE.md#3-the-module-contract), point 6),
+   and confirm every resource actually exists by running those commands
+   (or `make cdk-resources STACK=<StackId>`), then `uv run cdk destroy
+   <StackId>` and, if the stack has a VPC, `uv run python scripts/floci_prune.py --apply`.
 5. Write `tests/unit/test_NN_service.py` (see
    [`docs/TESTING.md`](docs/TESTING.md)) and a matching "Tests" section in
    the module's `README.md`, and confirm `uv run pytest tests/unit/test_NN_service.py -v`
