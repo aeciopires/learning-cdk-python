@@ -1169,6 +1169,18 @@ unaffected - this only matters for **live preview**:
 - [AWS CDK v2 Developer Guide - AWS CDK bootstrapping](https://docs.aws.amazon.com/cdk/v2/guide/bootstrapping.html) · [Troubleshooting common AWS CDK issues](https://docs.aws.amazon.com/cdk/v2/guide/troubleshooting.html)
 - [AWS CDK v2 Developer Guide (home)](https://docs.aws.amazon.com/cdk/v2/guide/home.html)
 - [AWS CDK API Reference (Python)](https://docs.aws.amazon.com/cdk/api/v2/python/)
+- [aws/aws-cdk on GitHub](https://github.com/aws/aws-cdk) - the AWS CDK's source code, issues, and release notes
+- Community tutorials and articles (not official AWS documentation - helpful
+  for a second explanation, but check details against the official guides
+  above):
+  [AWS CDK and Python - Step by Step Tutorial (Be A Better Dev)](https://beabetterdev.com/2022/06/24/aws-cdk-and-python-step-by-step-tutorial/) ·
+  [AWS CDK tutorial (DataCamp)](https://www.datacamp.com/tutorial/aws-cdk) ·
+  [AWS CDK tutorial, in Portuguese (DataCamp)](https://www.datacamp.com/pt/tutorial/aws-cdk) ·
+  [Getting started with CDK and Python (Medium)](https://medium.com/@ihona.correadecabo/getting-started-with-cdk-and-python-aef821265e2b) ·
+  [Getting started with Python based IaC using AWS CDK (DEV Community)](https://dev.to/aws-builders/getting-started-with-python-based-iac-using-aws-cdk-152h) ·
+  [My journey to master AWS CDK (Towards AWS)](https://towardsaws.com/my-journey-to-master-aws-cdk-d8b9b230fa9e) ·
+  [Lessons in AWS Python CDK: 3 - Sometimes You Just Need to Learn to Read Typescript (DEV Community)](https://dev.to/aws-builders/lessons-in-aws-python-cdk-3-sometimes-you-just-need-to-learn-to-read-typescript-597c) ·
+  [Using uv with the Python AWS CDK (Manny Savage)](https://savage.cx/kbase/2024-12-01-uv-aws-cdk/)
 - [`aws-cdk-lib` on PyPI](https://pypi.org/project/aws-cdk-lib/) · [`constructs` on PyPI](https://pypi.org/project/constructs/)
 - [Docker Engine - Install on Ubuntu](https://docs.docker.com/engine/install/ubuntu/) · [Docker Desktop for Mac](https://docs.docker.com/desktop/install/mac-install/) · [Colima](https://github.com/abiosoft/colima) (macOS/Linux Docker Desktop alternative)
 - [AWS CLI v2 - Install](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
